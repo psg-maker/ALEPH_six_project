@@ -87,6 +87,36 @@ async function waitFor(check, label) {
   assert.equal(d.querySelectorAll('.task-row').length, 0);
   console.log('PASS new Plan persisted, task picker updated, Plan-specific empty list');
 
+  // 원하는 계획이 없는 경우에도 작성하던 할 일을 잃지 않아야 한다.
+  d.querySelector('#add-task').click();
+  form.elements.title.value = 'Draft task ' + Date.now();
+  const draftTitle = form.elements.title.value;
+  form.elements.expected_minutes.value = '23';
+  form.elements.description.value = 'Preserve this draft';
+  const inlineCreate = d.querySelector('#task-new-plan');
+  assert(inlineCreate, 'Task form must offer creation of a missing Plan');
+  inlineCreate.click();
+  assert(d.querySelector('#plan-dialog').open);
+  d.querySelector('[data-close="plan-dialog"]').click();
+  assert(d.querySelector('#task-dialog').open);
+  assert.equal(form.elements.title.value, draftTitle);
+  inlineCreate.click();
+  const inlineTitle = 'Inline plan ' + Date.now();
+  pf.elements.title.value = inlineTitle;
+  pf.elements.success_criteria.value = 'Keep drafting';
+  pf.dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(() => d.querySelector('#task-plan').selectedOptions[0]?.textContent === inlineTitle, 'created plan selected');
+  assert(d.querySelector('#task-dialog').open);
+  assert.equal(form.elements.title.value, draftTitle);
+  assert.equal(form.elements.description.value, 'Preserve this draft');
+  assert.equal(form.elements.expected_minutes.value, '23');
+  const inlinePlanId = Number(d.querySelector('#task-plan').value);
+  form.dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
+  await waitFor(() => !d.querySelector('#task-dialog').open, 'draft task saved');
+  const linkedTask = (await (await fetch(base + '/tasks')).json()).find(t => t.title === draftTitle);
+  assert.equal(linkedTask.plan_id, inlinePlanId);
+  console.log('PASS inline Plan create/cancel preserves task draft, auto-selects new Plan and saves correct link');
+
   const refreshed = new JSDOM(await (await fetch(base)).text(), { url: base, runScripts: 'outside-only' });
   refreshed.window.fetch = (path, options) => fetch(new URL(path, base), options);
   refreshed.window.eval(fs.readFileSync('app/static/planner.js', 'utf8'));

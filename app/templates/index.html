@@ -48,7 +48,9 @@
 
   <dialog id="task-dialog" aria-labelledby="task-dialog-title"><form id="task-form"><div class="dialog-heading"><div><p class="eyebrow">작은 실행의 시작</p><h2 id="task-dialog-title">새로운 할 일</h2></div><button type="button" class="close" data-close="task-dialog" aria-label="닫기">×</button></div><p class="form-error" id="task-error" role="alert" hidden></p>
     <label>할 일 제목<input name="title" required maxlength="200" placeholder="무엇을 해볼까요?" autocomplete="off"></label>
-    <label>연결할 계획<select name="plan_id" id="task-plan" required></select></label>
+    <div class="plan-picker-heading"><label for="task-plan">연결할 계획</label><button type="button" class="text-button" id="task-new-plan">＋ 새 계획 만들기</button></div>
+    <select name="plan_id" id="task-plan" required aria-describedby="task-plan-help"></select>
+    <p class="field-help" id="task-plan-help">원하는 계획이 없으면 새로 만들 수 있습니다. 작성 중인 할 일은 유지됩니다.</p>
     <div class="form-grid"><label>예정일<input name="scheduled_date" type="date" required value="{{ today }}"></label><label>마감일 <span class="optional">선택</span><input name="due_date" type="date"></label></div>
     <div class="form-grid"><label>예상 시간 <span class="optional">분</span><input name="expected_minutes" type="number" required min="0" step="1" value="30"></label><label>우선순위<select name="priority"><option value="MEDIUM">보통</option><option value="HIGH">높음</option><option value="LOW">낮음</option></select></label></div>
     <label>태그 <span class="optional">선택 · 1개</span><input name="tag" maxlength="50" placeholder="예: 공부"></label><label>내용 <span class="optional">선택</span><textarea name="description" rows="3" placeholder="기억해둘 내용을 적어주세요."></textarea></label>

@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const state = { view: 'today', planId: null, plans: [], tasks: [], summaries: new Map(), details: new Map(), generation: 0 };
+  const state = { view: 'today', planId: null, plans: [], tasks: [], summaries: new Map(), details: new Map(), generation: 0, planFromTask: false, pendingTaskPlanId: null };
   const today = document.body.dataset.today;
   const labelDate = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
   $('date-label').textContent = labelDate.format(new Date(today + 'T12:00:00'));
@@ -63,7 +63,15 @@
     });
     const select = $('task-plan'); const previous = select.value; select.replaceChildren();
     state.plans.forEach(plan => { const option = el('option', '', plan.title); option.value = plan.id; select.append(option); });
-    if (state.planId != null) select.value = state.planId; else if (previous && state.plans.some(p => String(p.id) === previous)) select.value = previous;
+    // 할 일 작성 중 만든 계획을 우선 선택하고, 폼을 새로 그려도 초안은 유지한다.
+    const preferred = state.pendingTaskPlanId ?? ($('task-dialog').open && previous ? previous : state.planId ?? previous);
+    if (preferred != null && state.plans.some(p => String(p.id) === String(preferred))) {
+      select.value = preferred;
+      state.pendingTaskPlanId = null;
+    }
+    if (!state.plans.length) {
+      const option = el('option', '', '먼저 새 계획을 만들어주세요'); option.value = ''; select.append(option);
+    }
   }
 
   function renderTasks() {
@@ -139,12 +147,17 @@
     finally { if (generation === state.generation) $('task-list').setAttribute('aria-busy', 'false'); }
   }
   function changeView(view, planId = null) { state.view = view; state.planId = planId; $('search').value = ''; $('status-filter').value = ''; renderChrome(); load(); }
-  function openPlan() { $('plan-error').hidden = true; $('plan-dialog').showModal(); }
+  function openPlan(fromTask = false) {
+    state.planFromTask = fromTask === true;
+    $('plan-error').hidden = true;
+    // 기존 할 일 dialog를 닫지 않아 입력한 제목·날짜·내용을 보존한다.
+    $('plan-dialog').showModal();
+  }
   function openTask() {
-    if (!state.plans.length) { tell('먼저 할 일을 연결할 계획을 만들어주세요.'); openPlan(); return; }
     $('task-error').hidden = true; renderPlans(); $('task-dialog').showModal();
   }
   $('add-task').addEventListener('click', openTask); $('add-plan').addEventListener('click', openPlan);
+  $('task-new-plan').addEventListener('click', () => openPlan(true));
   document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => $(button.dataset.close).close()));
   document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => changeView(button.dataset.view)));
   $('search').addEventListener('input', renderTasks); $('status-filter').addEventListener('change', renderTasks);
@@ -179,6 +192,12 @@
     if (!values.title.trim() || !values.category.trim() || !values.success_criteria.trim()) throw new Error('제목, 카테고리, 성공 기준을 입력해주세요.');
     if (values.end_date < values.start_date) throw new Error('종료일은 시작일보다 빠를 수 없습니다.');
     return { ...values, title: values.title.trim(), category: values.category.trim(), expected_minutes: Number(values.expected_minutes), description: values.description || null };
-  }, () => tell('계획을 저장했습니다. 이제 할 일을 추가해보세요.'));
+  }, saved => {
+    if (state.planFromTask) {
+      state.pendingTaskPlanId = saved.id;
+      tell('새 계획을 만들었습니다. 작성 중인 할 일에 자동으로 선택됩니다.');
+    } else tell('계획을 저장했습니다. 이제 할 일을 추가해보세요.');
+    state.planFromTask = false;
+  });
   load();
 })();
