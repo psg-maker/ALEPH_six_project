@@ -3,6 +3,7 @@
 실행: venv/Scripts/python.exe -m tests.ui_preview
 """
 from datetime import date, timedelta
+import asyncio
 
 import uvicorn
 from sqlalchemy import create_engine, event
@@ -43,5 +44,24 @@ with database.SessionLocal() as db:
 
 from app.main import app
 
+
+class SerialMemoryPreview:
+    """메모리 DB 연결 하나를 공유하므로 테스트 HTTP 요청을 순서대로 처리한다.
+
+    실제 앱의 파일 DB/서버 설정에는 적용하지 않는다.
+    """
+    def __init__(self, application):
+        self.application = application
+        self.lock = None
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.application(scope, receive, send)
+        if self.lock is None:
+            self.lock = asyncio.Lock()
+        async with self.lock:
+            await self.application(scope, receive, send)
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8765)
+    uvicorn.run(SerialMemoryPreview(app), host="127.0.0.1", port=8765)

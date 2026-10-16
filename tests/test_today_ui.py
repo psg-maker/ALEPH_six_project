@@ -63,7 +63,7 @@ class TodayUITest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status, 200)
         self.assertIn(b"text/html", headers[b"content-type"])
         self.assertIn('id="task-form"', body.decode())
-        for path in ("/static/planner.css", "/static/planner.js"):
+        for path in ("/static/planner.css", "/static/planner.js", "/static/insights.js", "/static/review.js", "/static/notes.js"):
             status, _, body = await self.request("GET", path)
             self.assertEqual(status, 200)
             self.assertTrue(body)

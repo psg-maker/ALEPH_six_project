@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#5665d8">
   <title>ALEPH · 나의 계획과 기록</title>
   <link rel="stylesheet" href="{{ url_for('static', path='planner.css') }}">
+  <script src="{{ url_for('static', path='review.js') }}" defer></script>
+  <script src="{{ url_for('static', path='notes.js') }}" defer></script>
+  <script src="{{ url_for('static', path='insights.js') }}" defer></script>
   <script src="{{ url_for('static', path='planner.js') }}" defer></script>
 </head>
 <body data-today="{{ today }}">
@@ -16,6 +19,8 @@
       <button class="nav-button selected" data-view="today" aria-current="page"><span aria-hidden="true">◷</span>오늘</button>
       <button class="nav-button" data-view="all"><span aria-hidden="true">☷</span>전체 할 일</button>
       <button class="nav-button" data-view="plans"><span aria-hidden="true">▦</span>나의 계획</button>
+      <button class="nav-button" data-view="insights"><span aria-hidden="true">↗</span>돌아보기</button>
+      <button class="nav-button" data-view="notes"><span aria-hidden="true">✎</span>일일 메모</button>
     </nav>
     <div class="sidebar-label">진행 중인 계획</div>
     <div id="sidebar-plans"></div>
@@ -41,10 +46,38 @@
         </section>
         <section class="plans-panel" aria-labelledby="plans-title"><div class="panel-heading"><h2 id="plans-title">진행 중인 계획</h2><button class="text-button" id="add-plan">＋ 새 계획</button></div><div id="plan-list"><p class="empty">계획을 불러오는 중…</p></div><div class="plan-tip"><span aria-hidden="true">✧</span><p>완벽한 하루보다<br>꾸준히 이어가는 하루.</p></div></section>
       </div>
+      <section id="insights-view" aria-labelledby="insight-title" hidden>
+        <div class="insight-toolbar"><label for="insight-plan" id="insight-title">돌아볼 계획<select id="insight-plan"></select></label><button type="button" class="secondary" id="insight-refresh">↻ 집계 새로고침</button></div>
+        <p class="field-help" id="insight-scope">선택한 계획의 전체 기록 기준입니다. 숫자를 누르면 실제 근거 기록을 확인할 수 있습니다.</p>
+        <p class="form-error" id="insight-error" role="alert" hidden></p>
+        <div id="insight-cards" class="insight-cards" aria-label="Plan별 집계">
+          <button class="insight-card" type="button" data-metric="task_count" aria-pressed="false"><span>전체 할 일</span><strong class="insight-number">—</strong><span class="insight-hint">할 일 목록 ↗</span></button>
+          <button class="insight-card" type="button" data-metric="completed_task_count" aria-pressed="false"><span>완료</span><strong class="insight-number">—</strong><span class="insight-hint">완료된 할 일 ↗</span></button>
+          <button class="insight-card" type="button" data-metric="overdue_task_count" aria-pressed="false"><span>지연</span><strong class="insight-number">—</strong><span class="insight-hint">마감일이 지난 미완료 ↗</span></button>
+          <button class="insight-card" type="button" data-metric="blocked_task_count" aria-pressed="false"><span>막힘</span><strong class="insight-number">—</strong><span class="insight-hint">이유가 기록된 할 일 ↗</span></button>
+          <button class="insight-card" type="button" data-metric="expected_minutes" aria-pressed="false"><span>예상 시간 · 분</span><strong class="insight-number">—</strong><span class="insight-hint">할 일의 예상 시간 ↗</span></button>
+          <button class="insight-card" type="button" data-metric="actual_minutes" aria-pressed="false"><span>실제 시간 · 분</span><strong class="insight-number">—</strong><span class="insight-hint">실행 기록의 시간 ↗</span></button>
+          <button class="insight-card" type="button" data-metric="difference_minutes" aria-pressed="false"><span>시간 차이 · 분</span><strong class="insight-number">—</strong><span class="insight-hint">실제 − 예상 ↗</span></button>
+          <button type="button" class="insight-rate-card" id="insight-rate-open" aria-label="완료율의 근거인 완료한 할 일 보기"><span>완료율</span><strong id="insight-rate">—</strong><div class="progress-track"><span id="insight-rate-bar"></span></div><span class="field-help">완료 / 전체 · 완료 목록 ↗</span></button>
+        </div>
+        <section class="evidence-panel" aria-labelledby="insight-evidence-title"><header class="panel-heading"><h2 id="insight-evidence-title">근거 기록</h2></header><p id="insight-evidence-total" class="evidence-total"></p><p id="insight-evidence-error" class="form-error" role="alert" hidden></p><div id="insight-evidence" aria-live="polite" aria-busy="false"><p class="empty">계획을 선택해주세요.</p></div></section>
+        <section id="review-panel" class="review-panel" aria-labelledby="review-title" hidden>
+          <header class="panel-heading"><h2 id="review-title">돌아보고, 다음 계획으로</h2><button type="button" class="text-button" id="review-retry">↻ 회고 다시 읽기</button></header>
+          <p id="review-load-state" class="field-help"></p><p id="review-error" class="form-error" role="alert" hidden></p><p id="review-status" class="notice" role="status" aria-live="polite" hidden></p>
+          <form id="review-form"><label>돌아본 내용 <span class="optional">선택</span><textarea name="reflection" rows="3" placeholder="잘된 점과 아쉬웠던 점"></textarea></label><div class="form-grid"><label>고칠 점 <span class="optional">다음 계획에 반영</span><textarea name="improvement" rows="3" placeholder="다음에는 무엇을 바꾸고 싶나요?"></textarea></label><label>다음 실천 <span class="optional">선택</span><textarea name="next_action" rows="3" placeholder="다음 계획에서 실천할 한 가지"></textarea></label></div><div class="dialog-actions"><span id="review-draft-label" class="field-help" hidden>아직 저장하지 않은 변경이 있습니다.</span><button type="submit" class="primary">회고 저장</button></div></form>
+          <div class="review-next-actions"><p class="field-help">고칠 점을 저장한 뒤 새 계획의 내용을 미리 확인하고 생성할 수 있습니다.</p><button type="button" class="secondary" id="next-plan-open">개선점을 담아 다음 계획 만들기</button><button type="button" class="secondary" id="review-next-link" hidden>연결된 다음 계획 열기</button></div>
+        </section>
+      </section>
+      <section id="daily-notes-view" aria-labelledby="daily-note-title" hidden>
+        <div class="note-toolbar"><label for="daily-note-date">기록할 날짜<input id="daily-note-date" type="date" value="{{ today }}" required></label><div class="note-date-actions"><button type="button" class="secondary" id="daily-note-prev" aria-label="이전 날짜">←</button><button type="button" class="secondary" id="daily-note-today">오늘</button><button type="button" class="secondary" id="daily-note-next" aria-label="다음 날짜">→</button></div></div>
+        <section class="note-paper"><header class="panel-heading"><h2 id="daily-note-title">오늘의 기록</h2><button type="button" class="text-button" id="daily-note-retry">↻ 다시 읽기</button></header><p class="field-help" id="daily-note-meta">메모를 불러오는 중…</p><p class="form-error" id="daily-note-error" role="alert" hidden></p><p class="notice" id="daily-note-status" role="status" aria-live="polite" hidden></p>
+          <form id="daily-note-form"><label for="daily-note-content" class="sr-only">날짜별 메모 내용</label><textarea name="content" id="daily-note-content" rows="12" placeholder="오늘의 생각, 배운 것, 기억하고 싶은 순간을 자유롭게 남겨보세요."></textarea><div class="dialog-actions"><span class="field-help" id="daily-note-draft">날짜를 바꿔도 작성 중인 초안은 이 페이지 안에서 유지됩니다.</span><button type="submit" class="primary">메모 저장</button></div></form>
+        </section><p class="field-help">저장하면 해당 날짜의 내용을 교체합니다. 내용을 모두 지우고 저장하면 빈 메모로 남습니다. 저장하지 않은 초안은 페이지를 닫거나 새로고침하면 사라집니다.</p>
+      </section>
     </main>
-    <footer class="page-footer">ALEPH <span>나의 계획과 실제를 담는 공간</span></footer>
+    <footer class="page-footer">ALEPH <span>나의 계획과 실제를 담는 공간</span><a href="/export">전체 기록 내보내기 ↗</a></footer>
   </div>
-  <nav class="bottom-nav" aria-label="모바일 메뉴"><button data-view="today" class="selected" aria-current="page"><span aria-hidden="true">◷</span>오늘</button><button data-view="all"><span aria-hidden="true">☷</span>전체 할 일</button><button data-view="plans"><span aria-hidden="true">▦</span>계획</button><a href="/export"><span aria-hidden="true">↓</span>내보내기</a></nav>
+  <nav class="bottom-nav" aria-label="모바일 메뉴"><button data-view="today" class="selected" aria-current="page"><span aria-hidden="true">◷</span>오늘</button><button data-view="all"><span aria-hidden="true">☷</span>전체 할 일</button><button data-view="plans"><span aria-hidden="true">▦</span>계획</button><button data-view="insights"><span aria-hidden="true">↗</span>돌아보기</button><button data-view="notes"><span aria-hidden="true">✎</span>메모</button></nav>
 
   <dialog id="task-dialog" aria-labelledby="task-dialog-title"><form id="task-form"><div class="dialog-heading"><div><p class="eyebrow">작은 실행의 시작</p><h2 id="task-dialog-title">새로운 할 일</h2></div><button type="button" class="close" data-close="task-dialog" aria-label="닫기">×</button></div><p class="form-error" id="task-error" role="alert" hidden></p>
     <label>할 일 제목<input name="title" required maxlength="200" placeholder="무엇을 해볼까요?" autocomplete="off"></label>
@@ -57,9 +90,44 @@
     <div class="dialog-actions"><button type="button" class="secondary" data-close="task-dialog">취소</button><button type="submit" class="primary">할 일 저장</button></div>
   </form></dialog>
   <dialog id="plan-dialog" aria-labelledby="plan-dialog-title"><form id="plan-form"><div class="dialog-heading"><div><p class="eyebrow">계획에서 실행으로</p><h2 id="plan-dialog-title">새로운 계획</h2></div><button type="button" class="close" data-close="plan-dialog" aria-label="닫기">×</button></div><p class="form-error" id="plan-error" role="alert" hidden></p>
+    <p id="plan-edit-help" class="field-help" hidden>수정 전 내용은 이력에 남고, 연결된 할 일과 현재 상태는 유지됩니다.</p>
     <label>계획 제목<input name="title" required maxlength="200" placeholder="이루고 싶은 목표"></label><div class="form-grid"><label>카테고리<input name="category" required maxlength="50" value="공부"></label><label>우선순위<select name="priority"><option value="MEDIUM">보통</option><option value="HIGH">높음</option><option value="LOW">낮음</option></select></label></div>
     <div class="form-grid"><label>시작일<input name="start_date" type="date" required value="{{ today }}"></label><label>종료일<input name="end_date" type="date" required value="{{ today }}"></label></div><label>예상 시간 <span class="optional">분</span><input name="expected_minutes" type="number" min="0" step="1" value="60" required></label><label>성공 기준<textarea name="success_criteria" required rows="2" placeholder="어떤 모습이면 목표를 이룬 걸까요?"></textarea></label><label>설명 <span class="optional">선택</span><textarea name="description" rows="2"></textarea></label>
     <div class="dialog-actions"><button type="button" class="secondary" data-close="plan-dialog">취소</button><button class="primary" type="submit">계획 저장</button></div>
+  </form></dialog>
+  <dialog id="plan-history-dialog" aria-labelledby="plan-history-title"><div class="dialog-heading"><h2 id="plan-history-title">계획 수정 이력</h2><button type="button" class="close" data-close="plan-history-dialog" aria-label="닫기">×</button></div><p class="field-help">각 이력은 수정 직전의 내용입니다. 현재 계획은 계획 수정 창에서 확인할 수 있습니다.</p><p id="plan-history-error" class="form-error" role="alert" hidden></p><button type="button" class="text-button" id="plan-history-retry">↻ 다시 읽기</button><div id="plan-history-list" aria-live="polite"></div></dialog>
+  <dialog id="execution-dialog" aria-labelledby="execution-dialog-title">
+    <form id="execution-form">
+      <div class="dialog-heading"><div><p class="eyebrow">실제로 해본 일의 기록</p><h2 id="execution-dialog-title">실행 기록</h2></div><button type="button" class="close" data-close="execution-dialog" aria-label="닫기">×</button></div>
+      <p class="record-task-title" id="execution-task-title"></p>
+      <p class="field-help">기록 저장과 완료 체크는 별개입니다. 실제 시간은 직접 입력하며 자동 계산하지 않습니다.</p>
+      <p class="form-error" id="execution-error" role="alert" hidden></p>
+      <p class="notice" id="execution-status" role="status" aria-live="polite" hidden></p>
+      <label>실제 소요 시간 <span class="optional">선택 · 분</span><input name="actual_minutes" type="number" min="0" step="1" placeholder="예: 25"></label>
+      <div class="form-grid"><label>시작 시각 <span class="optional">선택</span><input name="started_at" type="datetime-local" step="1"></label><label>종료 시각 <span class="optional">선택</span><input name="ended_at" type="datetime-local" step="1"></label></div>
+      <label>수행 메모 <span class="optional">선택</span><textarea name="memo" rows="2" placeholder="실제로 진행한 내용"></textarea></label>
+      <label>막힌 이유 <span class="optional">선택</span><textarea name="blocked_reason" rows="2" placeholder="어디에서 막혔고 무엇이 필요했나요?"></textarea></label>
+      <div class="dialog-actions"><button type="button" class="secondary" data-close="execution-dialog">닫기</button><button type="submit" class="primary">기록 저장</button></div>
+    </form>
+    <section class="execution-history-section" aria-labelledby="execution-history-title"><div class="panel-heading"><h3 id="execution-history-title">저장된 실행 기록</h3><button type="button" class="text-button" id="execution-history-retry">↻ 새로고침</button></div><p class="form-error" id="execution-history-error" role="alert" hidden></p><div id="execution-history" aria-live="polite" aria-busy="false"></div></section>
+  </dialog>
+  <dialog id="link-dialog" aria-labelledby="link-dialog-title"><form id="link-form">
+    <div class="dialog-heading"><div><p class="eyebrow">다시 찾기 쉬운 자료</p><h2 id="link-dialog-title">자료 링크 추가</h2></div><button type="button" class="close" data-close="link-dialog" aria-label="닫기">×</button></div>
+    <p class="record-task-title" id="link-task-title"></p>
+    <p class="form-error" id="link-error" role="alert" hidden></p>
+    <label>표시 이름<input name="label" required maxlength="200" placeholder="예: 오늘의 복습 노트" autocomplete="off"></label>
+    <label>자료 주소<input name="url" type="url" required maxlength="2083" placeholder="https://example.com" autocomplete="url" inputmode="url" aria-describedby="link-url-help"></label>
+    <p class="field-help" id="link-url-help">http:// 또는 https://로 시작하는 주소를 입력해주세요. 저장한 자료는 새 탭으로 열립니다.</p>
+    <div class="dialog-actions"><button type="button" class="secondary" data-close="link-dialog">취소</button><button type="submit" class="primary">링크 저장</button></div>
+  </form></dialog>
+  <dialog id="next-plan-dialog" aria-labelledby="next-plan-title"><form id="next-plan-form">
+    <div class="dialog-heading"><div><p class="eyebrow">회고를 다음 실행으로</p><h2 id="next-plan-title">다음 계획 미리보기</h2></div><button type="button" class="close" data-close="next-plan-dialog" aria-label="닫기">×</button></div>
+    <p id="next-plan-error" class="form-error" role="alert" hidden></p>
+    <label>새 계획 제목<input name="title" required maxlength="200"></label><div class="form-grid"><label>카테고리<input name="category" required maxlength="50"></label><label>우선순위<select name="priority"><option value="MEDIUM">보통</option><option value="HIGH">높음</option><option value="LOW">낮음</option></select></label></div>
+    <div class="form-grid"><label>시작일<input name="start_date" type="date" required></label><label>종료일<input name="end_date" type="date" required></label></div>
+    <label>예상 시간 <span class="optional">분</span><input name="expected_minutes" type="number" min="0" step="1" required></label><label>성공 기준<textarea name="success_criteria" required rows="2"></textarea></label><label>추가 설명 <span class="optional">선택</span><textarea name="description" rows="2" placeholder="개선점 외에 덧붙일 설명"></textarea></label>
+    <div class="next-plan-preview"><h3>새 계획에 저장될 설명</h3><p id="next-plan-preview"></p></div><p class="field-help">저장된 회고의 고칠 점과 다음 실천이 설명에 추가됩니다. 기존 계획은 바뀌지 않습니다.</p>
+    <div class="dialog-actions"><button type="button" class="secondary" data-close="next-plan-dialog">취소</button><button type="submit" class="primary">다음 계획 생성</button></div>
   </form></dialog>
 </body>
 </html>

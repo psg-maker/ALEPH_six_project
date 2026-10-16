@@ -50,16 +50,17 @@ async function waitFor(check, label) {
 
   const row = () => [...d.querySelectorAll('.task-row')].find(n => n.textContent.includes(title));
   let checkbox = row().querySelector('input'); checkbox.checked = true; checkbox.dispatchEvent(new w.Event('change'));
-  await waitFor(() => row()?.classList.contains('is-done'), 'complete');
+  await waitFor(() => row()?.classList.contains('is-done') && !row().querySelector('input').disabled, 'complete');
   let saved = (await (await fetch(base + '/tasks')).json()).find(t => t.id === task.id); assert.equal(saved.status, 'DONE');
   checkbox = row().querySelector('input'); checkbox.checked = false; checkbox.dispatchEvent(new w.Event('change'));
-  await waitFor(() => row() && !row().classList.contains('is-done'), 'reopen');
+  await waitFor(() => row() && !row().classList.contains('is-done') && !row().querySelector('input').disabled, 'reopen');
   saved = (await (await fetch(base + '/tasks')).json()).find(t => t.id === task.id); assert.equal(saved.status, 'TODO'); assert.equal(saved.completed_at, null);
   assert.deepEqual(await (await fetch(base + `/tasks/${task.id}/executions`)).json(), []);
   console.log('PASS checkbox complete/reopen persisted, no automatic execution');
 
   failNextPatch = true; checkbox = row().querySelector('input'); checkbox.checked = true; checkbox.dispatchEvent(new w.Event('change'));
-  await waitFor(() => !d.querySelector('#load-error').hidden, 'network failure shown');
+  await waitFor(() => !d.querySelector('#load-error').hidden && !row().querySelector('input').disabled, 'network failure shown');
+  checkbox = row().querySelector('input');
   assert.equal(checkbox.checked, false); assert.equal(checkbox.disabled, false);
   console.log('PASS request failure visible; checkbox restored and usable');
 
