@@ -1,0 +1,136 @@
+<div id="aleph-design-options">
+<style>
+#aleph-design-options{font-family:Arial,"Malgun Gothic",sans-serif;color-scheme:light dark}
+#aleph-design-options *{box-sizing:border-box}
+#aleph-design-options .stage{min-height:690px;padding:12px 0}
+#aleph-design-options .product{--ink:light-dark(#20252c,#e7e9ed);--sub:light-dark(#68717e,#aab3c1);--line:light-dark(#e3e7ed,#343e4d);--paper:light-dark(#fff,#1c2530);--ground:light-dark(#f5f7fa,#141c26);--accent:#5468dd;--round:14px;background:var(--ground);color:var(--ink);border:1px solid var(--line);border-radius:var(--round);overflow:hidden;font-size:14px;line-height:1.55;min-height:640px}
+#aleph-design-options button,#aleph-design-options input{font:inherit}
+#aleph-design-options button{cursor:pointer}
+#aleph-design-options .shell{display:grid;grid-template-columns:164px minmax(0,1fr);min-height:640px}
+#aleph-design-options aside{padding:26px 16px;background:var(--paper);border-right:1px solid var(--line)}
+#aleph-design-options .brand{font-weight:600;letter-spacing:2px;margin-bottom:4px}
+#aleph-design-options .muted{color:var(--sub);font-size:12px}
+#aleph-design-options .navitem{padding:10px 12px;margin-top:7px;border-radius:8px;display:flex;gap:9px;align-items:center}
+#aleph-design-options .navitem.active{background:color-mix(in srgb,var(--accent) 12%,var(--paper));color:var(--accent)}
+#aleph-design-options .navlist{margin-top:30px}
+#aleph-design-options main{padding:28px;min-width:0}
+#aleph-design-options .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+#aleph-design-options h2{font-size:27px;line-height:1.3;font-weight:600;margin:4px 0 8px}
+#aleph-design-options h3{font-size:15px;font-weight:600;margin:0 0 14px}
+#aleph-design-options .action{border:0;border-radius:8px;background:var(--accent);color:#fff;padding:10px 16px;min-height:42px}
+#aleph-design-options .numbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:22px}
+#aleph-design-options .metric{padding:17px;border:1px solid var(--line);border-radius:var(--round);background:var(--paper)}
+#aleph-design-options .number{font-size:25px;font-weight:600;font-variant-numeric:tabular-nums;margin:5px 0}
+#aleph-design-options .columns{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(180px,1fr);gap:18px}
+#aleph-design-options .panel{background:var(--paper);padding:20px;border:1px solid var(--line);border-radius:var(--round);min-width:0}
+#aleph-design-options .row{padding:14px 0;border-bottom:1px solid var(--line)}
+#aleph-design-options .row:last-child{border-bottom:0}
+#aleph-design-options label.task{display:flex;align-items:flex-start;gap:11px;min-height:34px}
+#aleph-design-options input[type=checkbox]{width:19px;height:19px;margin:2px 0 0;accent-color:var(--accent);flex-shrink:0}
+#aleph-design-options .tasktext{min-width:0}
+#aleph-design-options label:has(input:checked) .tasktitle{text-decoration:line-through;color:var(--sub)}
+#aleph-design-options .linktext{color:var(--accent);font-size:12px;margin-top:6px;display:inline-block}
+#aleph-design-options .badge{font-size:11px;border-radius:5px;padding:3px 6px;background:color-mix(in srgb,var(--accent) 9%,var(--paper));color:var(--accent);display:inline-block}
+#aleph-design-options .plan{margin-bottom:22px}
+#aleph-design-options .planhead{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}
+#aleph-design-options .track{height:5px;background:var(--line);border-radius:5px;overflow:hidden;margin-top:9px}
+#aleph-design-options .fill{height:100%;background:var(--accent)}
+#aleph-design-options .bottomnav{display:none;justify-content:space-around;border-top:1px solid var(--line);padding:13px;background:var(--paper);font-size:12px}
+#aleph-design-options .bottomnav span:first-child{color:var(--accent);font-weight:600}
+#aleph-design-options .journal{--accent:#598068;--paper:light-dark(#fffdf7,#252820);--ground:light-dark(#f3f0e7,#1b1f19);--line:light-dark(#e4dfd1,#41473a)}
+#aleph-design-options .journal .shell{grid-template-columns:140px minmax(0,1fr)}
+#aleph-design-options .journal h2{font-family:Georgia,"Malgun Gothic",serif;font-size:32px;letter-spacing:-1px}
+#aleph-design-options .journal .panel{border:0;border-radius:0;background:transparent;padding:0}
+#aleph-design-options .journal .columns{grid-template-columns:minmax(0,1.5fr) minmax(180px,1fr);gap:30px}
+#aleph-design-options .journal .sectiontitle{border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:5px}
+#aleph-design-options .journal .numbers{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:25px;padding:12px 0}
+#aleph-design-options .journal .metric{border:0;background:transparent;padding:0 12px;border-right:1px solid var(--line);border-radius:0}
+#aleph-design-options .journal .metric:last-child{border-right:0}
+#aleph-design-options .note{padding:16px;background:var(--paper);border-radius:var(--round);margin-top:22px}
+#aleph-design-options .studio{--accent:#bd6549;--paper:light-dark(#fff,#24242a);--ground:light-dark(#f4f3f6,#18181e);--line:light-dark(#e4e1e8,#3e3b46)}
+#aleph-design-options .studio .shell{display:block}
+#aleph-design-options .studio aside{border-right:0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:26px;padding:17px 24px}
+#aleph-design-options .studio .navlist{margin:0;display:flex;gap:6px;flex-wrap:wrap}
+#aleph-design-options .studio .navitem{margin:0;padding:5px 10px}
+#aleph-design-options .studio main{padding:24px}
+#aleph-design-options .studio .top{margin-bottom:18px}
+#aleph-design-options .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+#aleph-design-options .lane{min-width:0}
+#aleph-design-options .tile{padding:16px;border-radius:var(--round);background:var(--paper);border:1px solid var(--line);margin-bottom:12px}
+#aleph-design-options .tile .muted{margin-top:12px}
+#aleph-design-options .laneheading{display:flex;justify-content:space-between;padding:0 4px;margin:0 0 12px;font-weight:600}
+#aleph-design-options .studio .numbers{margin-top:22px;margin-bottom:0}
+#aleph-design-options .mobile .shell{display:block;max-width:410px;margin:auto}
+#aleph-design-options .mobile{max-width:410px;margin:auto}
+#aleph-design-options .mobile aside{display:none}
+#aleph-design-options .mobile main{padding:22px 18px}
+#aleph-design-options .mobile .columns{grid-template-columns:1fr}
+#aleph-design-options .mobile .secondary{display:none}
+#aleph-design-options .mobile .bottomnav{display:flex}
+#aleph-design-options .mobile .board{grid-template-columns:1fr}
+#aleph-design-options .mobile .lane:not(:first-child){display:none}
+#aleph-design-options .mobile .metric{padding:12px 8px}
+#aleph-design-options .mobile .number{font-size:21px}
+@media(max-width:650px){#aleph-design-options .shell,#aleph-design-options .journal .shell{display:block}#aleph-design-options aside,#aleph-design-options .studio aside{display:none}#aleph-design-options main,#aleph-design-options .studio main{padding:22px 16px}#aleph-design-options .columns,#aleph-design-options .journal .columns{grid-template-columns:1fr}#aleph-design-options .secondary{display:none}#aleph-design-options .bottomnav{display:flex}#aleph-design-options .board{grid-template-columns:1fr}#aleph-design-options .lane:not(:first-child){display:none}#aleph-design-options .metric{padding:12px 8px}#aleph-design-options .number{font-size:21px}#aleph-design-options .stage{min-height:760px}}
+</style>
+<div class="viz-carousel" aria-label="플래너 UI 시안" data-previous-label="이전 시안" data-next-label="다음 시안">
+<section class="stage" data-variant="클린 워크스페이스" aria-label="클린 워크스페이스">
+<div class="product clean" id="aleph-clean" aria-label="클린 워크스페이스 디자인"><div class="shell">
+<aside><div class="brand">ALEPH</div><div class="muted">PLAN · DO · SEE</div><nav class="navlist" aria-label="주 메뉴"><div class="navitem active"><i data-lucide="check-square" aria-hidden="true"></i>오늘</div><div class="navitem">계획</div><div class="navitem">돌아보기</div><div class="navitem">일일 메모</div></nav></aside>
+<main><header class="top"><div><div class="muted">10월 16일 금요일 · 예시 데이터</div><h2>오늘, 한 걸음 더.</h2><span class="muted">계획을 실행으로 바꾸는 작은 체크.</span></div><button class="action add" type="button">＋ 할 일 추가</button></header>
+<div class="numbers"><div class="metric"><div class="muted">오늘 완료</div><div class="number"><span class="donecount">1</span> / 4</div><div class="muted">내 페이스대로</div></div><div class="metric"><div class="muted">예상 시간</div><div class="number">120<span class="muted"> 분</span></div><div class="muted">오늘 할 일 기준</div></div><div class="metric"><div class="muted">실제 시간</div><div class="number">25<span class="muted"> 분</span></div><div class="muted">직접 기록한 시간</div></div></div>
+<div class="columns"><section class="panel"><h3>오늘의 체크리스트</h3>
+<div class="row"><label class="task"><input type="checkbox" checked><span class="tasktext"><span class="tasktitle">Python API 복습</span><br><span class="muted">Python 프로젝트 · 예상 30분</span></span></label><span class="linktext">↗ Python 복습 노트</span></div>
+<div class="row"><label class="task"><input type="checkbox"><span class="tasktext"><span class="tasktitle">리눅스 파일 권한 공부</span><br><span class="muted">자격증 준비 · 예상 40분</span></span></label><span class="linktext">↗ 오늘의 학습 자료</span></div>
+<div class="row"><label class="task"><input type="checkbox"><span><span class="tasktitle">등 운동</span><br><span class="muted">운동 계획 · 예상 30분</span></span></label></div>
+<div class="row"><label class="task"><input type="checkbox"><span><span class="tasktitle">프로젝트 회고 정리</span><br><span class="muted">Python 프로젝트 · 예상 20분</span></span></label></div>
+</section><section class="panel secondary"><h3>진행 중인 계획</h3><div class="plan"><div class="planhead"><span>Python 프로젝트</span><span class="muted">40%</span></div><span class="muted">완료 2 / 전체 5</span><div class="track"><div class="fill" style="width:40%"></div></div></div><div class="plan"><div class="planhead"><span>리눅스마스터 준비</span><span class="muted">60%</span></div><span class="muted">완료 3 / 전체 5</span><div class="track"><div class="fill" style="width:60%"></div></div></div><hr><span class="muted">회고에서 다음 계획으로 이어가세요.</span></section></div><div class="feedback muted" aria-live="polite"></div></main></div><nav class="bottomnav" aria-label="모바일 메뉴"><span>오늘</span><span>계획</span><span>돌아보기</span><span>메모</span></nav></div>
+</section>
+<section class="stage" data-variant="차분한 데일리 저널" aria-label="차분한 데일리 저널" hidden>
+<div class="product journal" id="aleph-journal" aria-label="차분한 데일리 저널 디자인"><div class="shell"><aside><div class="brand">aleph.</div><div class="muted">나의 계획과 기록</div><nav class="navlist" aria-label="주 메뉴"><div class="navitem active">오늘의 페이지</div><div class="navitem">나의 계획</div><div class="navitem">돌아보기</div><div class="navitem">하루 메모</div></nav></aside>
+<main><header class="top"><div><div class="muted">FRIDAY, OCTOBER 16 · 예시 데이터</div><h2>나에게 맞는 속도로.</h2><span class="muted">오늘 할 일을 고르고, 하루의 흔적을 남겨요.</span></div><button type="button" class="action add">＋ 오늘 할 일</button></header>
+<div class="columns"><section class="panel"><h3 class="sectiontitle">오늘의 작은 약속</h3>
+<div class="row"><label class="task"><input type="checkbox" checked><span><span class="tasktitle">Python API 복습</span><br><span class="muted">공부 · 30분</span></span></label><span class="linktext">↗ 복습 노트 펼치기</span></div>
+<div class="row"><label class="task"><input type="checkbox"><span><span class="tasktitle">리눅스 파일 권한 공부</span><br><span class="muted">공부 · 40분</span></span></label></div>
+<div class="row"><label class="task"><input type="checkbox"><span><span class="tasktitle">등 운동</span><br><span class="muted">건강 · 30분</span></span></label></div>
+<div class="row"><label class="task"><input type="checkbox"><span><span class="tasktitle">프로젝트 회고 정리</span><br><span class="muted">기록 · 20분</span></span></label></div>
+<div class="numbers"><div class="metric"><span class="muted">오늘 완료</span><div class="number"><span class="donecount">1</span> / 4</div></div><div class="metric"><span class="muted">예상</span><div class="number">120<span class="muted"> 분</span></div></div><div class="metric"><span class="muted">실제</span><div class="number">25<span class="muted"> 분</span></div></div></div></section>
+<section class="panel secondary"><h3 class="sectiontitle">계속 이어가는 일</h3><div class="row"><span class="badge">공부</span><h3 style="margin-top:12px">Python 프로젝트</h3><span class="muted">작게 나눠 꾸준히 완성하기</span><div class="track"><div class="fill" style="width:40%"></div></div><span class="muted">2 / 5 완료</span></div><div class="note"><h3>오늘의 메모</h3><span class="muted">작게 나누니 시작하기가 쉬웠다.<br>내일도 한 가지씩 이어가기.</span></div></section></div><div class="feedback muted" aria-live="polite"></div></main></div><nav class="bottomnav" aria-label="모바일 메뉴"><span>오늘</span><span>계획</span><span>돌아보기</span><span>메모</span></nav></div>
+</section>
+<section class="stage" data-variant="포커스 보드" aria-label="포커스 보드" hidden>
+<div class="product studio" id="aleph-studio" aria-label="포커스 보드 디자인"><div class="shell"><aside><div class="brand">ALEPH /</div><nav class="navlist" aria-label="주 메뉴"><div class="navitem active">오늘</div><div class="navitem">계획</div><div class="navitem">돌아보기</div><div class="navitem">메모</div></nav></aside>
+<main><header class="top"><div><div class="muted">TODAY · 10월 16일 · 예시 데이터</div><h2>오늘의 포커스</h2><span class="muted">계획별로 보고, 완료는 체크로.</span></div><button class="action add" type="button">＋ 할 일 추가</button></header>
+<div class="board"><section class="lane"><h3 class="laneheading"><span>공부 · 프로젝트</span><span class="muted">2개</span></h3><div class="tile"><span class="badge">Python 프로젝트</span><label class="task" style="margin-top:14px"><input type="checkbox" checked><span class="tasktitle">Python API 복습</span></label><span class="linktext">↗ Python 복습 노트</span><div class="muted">예상 30분 · 실제 25분</div></div><div class="tile"><span class="badge">리눅스마스터</span><label class="task" style="margin-top:14px"><input type="checkbox"><span class="tasktitle">리눅스 파일 권한 공부</span></label><div class="muted">예상 40분</div></div></section>
+<section class="lane"><h3 class="laneheading"><span>운동</span><span class="muted">1개</span></h3><div class="tile"><span class="badge">10월 운동 계획</span><label class="task" style="margin-top:14px"><input type="checkbox"><span class="tasktitle">등 운동</span></label><div class="muted">예상 30분</div></div></section>
+<section class="lane"><h3 class="laneheading"><span>기록</span><span class="muted">1개</span></h3><div class="tile"><span class="badge">Python 프로젝트</span><label class="task" style="margin-top:14px"><input type="checkbox"><span class="tasktitle">프로젝트 회고 정리</span></label><div class="muted">예상 20분</div></div></section></div>
+<div class="numbers"><div class="metric"><span class="muted">오늘 완료</span><div class="number"><span class="donecount">1</span> / 4</div></div><div class="metric"><span class="muted">예상 시간</span><div class="number">120<span class="muted"> 분</span></div></div><div class="metric"><span class="muted">실제 시간</span><div class="number">25<span class="muted"> 분</span></div></div></div><div class="feedback muted" aria-live="polite"></div></main></div><nav class="bottomnav" aria-label="모바일 메뉴"><span>오늘</span><span>계획</span><span>돌아보기</span><span>메모</span></nav></div>
+</section></div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('aleph-design-options');
+  for (const product of root.querySelectorAll('.product')) {
+    const settings = { radius: 14, mobile: false };
+    const apply = () => {
+      product.style.setProperty('--round', settings.radius + 'px');
+      product.classList.toggle('mobile', settings.mobile);
+    };
+    apply();
+    if (globalThis.Tweak) {
+      const tweak = new Tweak({ container: product, onChange: apply });
+      tweak.addSlider(settings, 'radius', { label: '카드 모서리', min: 0, max: 24, unit: 'px' });
+      tweak.addToggle(settings, 'mobile', { label: '모바일 배치' });
+    }
+    product.querySelectorAll('input[type="checkbox"]').forEach(input => {
+      input.addEventListener('change', () => {
+        const done = product.querySelectorAll('input[type="checkbox"]:checked').length;
+        product.querySelector('.donecount').textContent = done;
+        product.querySelector('.feedback').textContent = '미리보기에서 ' + done + '개 완료';
+      });
+    });
+    product.querySelector('.add').addEventListener('click', () => {
+      product.querySelector('.feedback').textContent = '추가 폼은 선택한 디자인에 맞춰 구현합니다.';
+    });
+  }
+})();
+</script>

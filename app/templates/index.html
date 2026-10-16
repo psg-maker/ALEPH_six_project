@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#5665d8">
+  <title>ALEPH · 나의 계획과 기록</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='planner.css') }}">
+  <script src="{{ url_for('static', path='planner.js') }}" defer></script>
+</head>
+<body data-today="{{ today }}">
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="ALEPH 홈">ALEPH<span class="brand-dot">.</span></a>
+    <p class="brand-caption">PLAN · DO · SEE</p>
+    <nav class="main-nav" aria-label="주 메뉴">
+      <button class="nav-button selected" data-view="today" aria-current="page"><span aria-hidden="true">◷</span>오늘</button>
+      <button class="nav-button" data-view="all"><span aria-hidden="true">☷</span>전체 할 일</button>
+      <button class="nav-button" data-view="plans"><span aria-hidden="true">▦</span>나의 계획</button>
+    </nav>
+    <div class="sidebar-label">진행 중인 계획</div>
+    <div id="sidebar-plans"></div>
+    <div class="sidebar-foot"><span class="status-dot"></span>작은 실행이 만드는 변화<a href="/export">전체 기록 내보내기 ↗</a></div>
+  </aside>
+  <div class="workspace">
+    <header class="app-bar"><span>나의 워크스페이스 <span class="crumb">/</span> <span id="breadcrumb">오늘</span></span><span class="private-label">MY PLANNER</span></header>
+    <main id="main">
+      <header class="page-heading"><div><p id="date-label" class="eyebrow"></p><h1 id="page-title">오늘, 한 걸음 더.</h1><p id="page-caption">계획을 실행으로 바꾸는 작은 체크.</p></div><button class="primary" id="add-task">＋ 할 일 추가</button></header>
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <div id="load-error" class="error-box" role="alert" hidden><span id="load-error-text"></span><button id="retry" class="secondary">다시 시도</button></div>
+      <section class="stats" aria-label="현재 목록 요약">
+        <article class="stat"><span class="stat-label">완료한 할 일</span><div class="stat-value"><span id="done-count">—</span><span class="unit"> / <span id="task-count">—</span></span></div><div class="mini-track"><span id="completion-bar"></span></div><span id="completion-label" class="stat-foot">목록을 불러오는 중</span></article>
+        <article class="stat"><span class="stat-label">예상 시간</span><div class="stat-value"><span id="expected-minutes">—</span><span class="unit"> 분</span></div><span class="stat-foot">현재 목록의 예상 소요 시간</span></article>
+        <article class="stat"><span class="stat-label">실제 시간</span><div class="stat-value"><span id="actual-minutes">—</span><span class="unit"> 분</span></div><span id="actual-caption" class="stat-foot">직접 입력한 실행 기록 기준</span></article>
+      </section>
+      <div class="content-grid" id="content-grid">
+        <section class="task-panel" id="task-panel" aria-labelledby="list-title">
+          <div class="panel-heading"><h2 id="list-title">오늘의 체크리스트</h2><span class="count-badge" id="list-count">0</span><button class="text-button" id="refresh" aria-label="목록 새로고침">↻ 새로고침</button></div>
+          <div class="filters"><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="할 일 검색" aria-label="할 일 제목과 내용 검색"></label><select id="status-filter" aria-label="완료 상태"><option value="">모든 상태</option><option value="TODO">미완료</option><option value="DONE">완료</option></select></div>
+          <div id="task-list" aria-live="polite" aria-busy="true"><p class="empty">할 일을 불러오고 있습니다…</p></div>
+          <div class="panel-footer">체크하면 완료, 다시 누르면 미완료로 돌아갑니다.</div>
+        </section>
+        <section class="plans-panel" aria-labelledby="plans-title"><div class="panel-heading"><h2 id="plans-title">진행 중인 계획</h2><button class="text-button" id="add-plan">＋ 새 계획</button></div><div id="plan-list"><p class="empty">계획을 불러오는 중…</p></div><div class="plan-tip"><span aria-hidden="true">✧</span><p>완벽한 하루보다<br>꾸준히 이어가는 하루.</p></div></section>
+      </div>
+    </main>
+    <footer class="page-footer">ALEPH <span>나의 계획과 실제를 담는 공간</span></footer>
+  </div>
+  <nav class="bottom-nav" aria-label="모바일 메뉴"><button data-view="today" class="selected" aria-current="page"><span aria-hidden="true">◷</span>오늘</button><button data-view="all"><span aria-hidden="true">☷</span>전체 할 일</button><button data-view="plans"><span aria-hidden="true">▦</span>계획</button><a href="/export"><span aria-hidden="true">↓</span>내보내기</a></nav>
+
+  <dialog id="task-dialog" aria-labelledby="task-dialog-title"><form id="task-form"><div class="dialog-heading"><div><p class="eyebrow">작은 실행의 시작</p><h2 id="task-dialog-title">새로운 할 일</h2></div><button type="button" class="close" data-close="task-dialog" aria-label="닫기">×</button></div><p class="form-error" id="task-error" role="alert" hidden></p>
+    <label>할 일 제목<input name="title" required maxlength="200" placeholder="무엇을 해볼까요?" autocomplete="off"></label>
+    <label>연결할 계획<select name="plan_id" id="task-plan" required></select></label>
+    <div class="form-grid"><label>예정일<input name="scheduled_date" type="date" required value="{{ today }}"></label><label>마감일 <span class="optional">선택</span><input name="due_date" type="date"></label></div>
+    <div class="form-grid"><label>예상 시간 <span class="optional">분</span><input name="expected_minutes" type="number" required min="0" step="1" value="30"></label><label>우선순위<select name="priority"><option value="MEDIUM">보통</option><option value="HIGH">높음</option><option value="LOW">낮음</option></select></label></div>
+    <label>태그 <span class="optional">선택 · 1개</span><input name="tag" maxlength="50" placeholder="예: 공부"></label><label>내용 <span class="optional">선택</span><textarea name="description" rows="3" placeholder="기억해둘 내용을 적어주세요."></textarea></label>
+    <div class="dialog-actions"><button type="button" class="secondary" data-close="task-dialog">취소</button><button type="submit" class="primary">할 일 저장</button></div>
+  </form></dialog>
+  <dialog id="plan-dialog" aria-labelledby="plan-dialog-title"><form id="plan-form"><div class="dialog-heading"><div><p class="eyebrow">계획에서 실행으로</p><h2 id="plan-dialog-title">새로운 계획</h2></div><button type="button" class="close" data-close="plan-dialog" aria-label="닫기">×</button></div><p class="form-error" id="plan-error" role="alert" hidden></p>
+    <label>계획 제목<input name="title" required maxlength="200" placeholder="이루고 싶은 목표"></label><div class="form-grid"><label>카테고리<input name="category" required maxlength="50" value="공부"></label><label>우선순위<select name="priority"><option value="MEDIUM">보통</option><option value="HIGH">높음</option><option value="LOW">낮음</option></select></label></div>
+    <div class="form-grid"><label>시작일<input name="start_date" type="date" required value="{{ today }}"></label><label>종료일<input name="end_date" type="date" required value="{{ today }}"></label></div><label>예상 시간 <span class="optional">분</span><input name="expected_minutes" type="number" min="0" step="1" value="60" required></label><label>성공 기준<textarea name="success_criteria" required rows="2" placeholder="어떤 모습이면 목표를 이룬 걸까요?"></textarea></label><label>설명 <span class="optional">선택</span><textarea name="description" rows="2"></textarea></label>
+    <div class="dialog-actions"><button type="button" class="secondary" data-close="plan-dialog">취소</button><button class="primary" type="submit">계획 저장</button></div>
+  </form></dialog>
+</body>
+</html>
