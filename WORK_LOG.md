@@ -1,12 +1,38 @@
 # 단계별 작업 기록
 
+## 다음 작업: DB 계약 파일 최신화 — 2026-10-21
+
+- README.md는 Vercel+Neon 배포·이전 완료, 로컬 SQLite와 배포 DB의 분리, 환경변수/드라이버 설정, 서울 날짜·시각 규칙에 맞춰 최신화했다. C61 시크릿 창 공개 접근은 사용자 확인 완료이며 최종 앱/commit URL 기록은 별도다.
+- 다음 작업은 `contracts/pds-schema-v2.json`의 DB 환경과 시간 규칙 최신화다. `clock`만 수정하면 다른 항목에 과거 설명이 남으므로 아래 항목을 함께 대조·갱신해야 한다. 이 작업의 완료 확인은 아직 하지 않았다.
+  1. `database`: 환경변수가 없는 로컬은 SQLite, 배포는 `DATABASE_URL`로 연결하는 Neon PostgreSQL임을 구분한다. 실제 연결 주소나 비밀번호는 넣지 않는다. SQLite PRAGMA와 PostgreSQL 외래키 적용 방식도 구분한다.
+  2. `time_rules.clock`: 자동 생성·수정·완료 시각은 `now_in_seoul()`, 오늘 날짜는 `today_in_seoul()` 기준임을 기록한다. 서울 시각 UTC+9를 사용하며 시각은 기존처럼 시간대 표시 없이 저장한다.
+  3. `time_rules.deployment_todo`: 서울 시간 함수 적용과 배포는 완료됐으므로 과거의 구현 예정 설명을 고친다. 배포 화면의 지연 조건 확인 등 실제로 남은 검증만 기록한다.
+  4. 각 컬럼의 `default` 등 시간 설명: `server local datetime.now` 같은 표현을 실제 `now_in_seoul` 기본값/수정 시각 규칙에 맞춘다.
+  5. `rules.overdue`: 미완료이며 마감일이 `today_in_seoul()`보다 이전인 할 일이라는 기준을 명시한다. 오늘 마감·완료·마감 미입력은 제외한다.
+- 테이블·컬럼 이름과 관계는 이 설명 갱신 때문에 바꾸지 않는다. 계약 JSON은 앱에서 DB를 설정·변경하는 실행 파일이 아니므로 문서 수정 자체는 로컬 실행이나 기존 DB 자료에 영향을 주지 않는다. 갱신 후 JSON 파싱과 실제 코드/스키마 일치 여부를 확인한다.
+- 이번 요청에서는 위 할 일을 작업 기록에 저장했으며 DB 계약 파일 자체는 수정하지 않았다.
+
+## Neon 이전·Vercel 배포 확인 — 2026-10-21
+
+- 후속 사용자 확인: C61 시크릿 창 공개 접근 확인 완료. 실제 결과물 URL과 최종 고정 commit URL의 제출문 기록은 아직 남아 있다. 아래 배포 직후의 미확인 목록 중 공개 접근은 이 확인으로 완료 처리한다.
+- 배포 구성은 Vercel(FastAPI 화면·API) + Neon(PostgreSQL)으로 결정했다. DB 연결 주소는 소스에 넣지 않고 환경변수로 관리한다. 실제 연결 주소와 비밀번호는 이 기록에 남기지 않는다.
+- 사용자가 `app/database.py`를 수정했다. 환경변수 `DATABASE_URL`이 없으면 기존 로컬 SQLite를 사용하며, SQLite 전용 `check_same_thread`와 외래키 PRAGMA 이벤트는 SQLite일 때만 적용한다. PostgreSQL 드라이버 `psycopg2-binary==2.9.13`을 requirements.txt에 추가했다.
+- `app/time_utils.py`에 서울 시각(UTC+9) 공통 함수를 추가했다. main.py의 오늘 날짜 판단 네 곳과 완료 시각, models.py의 생성·수정 시각 기본 함수를 변경했다. 기존 시간대 없는 DB 형식을 유지하며 기존 저장값과 사용자가 직접 입력하는 실행 시각은 변환하지 않는다. 중복 시간 함수 제거 후 4개 파일 문법 및 메모리 DB 앱 테스트 2개 통과.
+- 사용자 확인: SQLite 원본을 backups 폴더에 별도 복사해 백업했고, Git Bash에서 `NEON_DATABASE_URL` 설정 후 Neon 읽기 연결 검사와 빈 대상 테이블 확인을 마쳤다.
+- 사용자 실행 결과로 실제 Neon 이전 성공 확인: `SUCCESS: All seven tables copied and every stored value verified.` 테이블별 원본/대상 수량은 일일 메모 2, 계획 4, 계획 이력 4, 회고 1, 할 일 5, 실행 3, 자료 링크 0으로 일치했다. 이는 이전·값 검증 결과이며 백업 생성 결과와는 별개다. 이전 스크립트는 다시 실행할 필요가 없다.
+- Vercel에서 본인 GitHub 저장소를 Import하고 `DATABASE_URL`을 설정해 배포했다. 이전 전용 환경변수 이름은 `NEON_DATABASE_URL`, 실제 앱 환경변수 이름은 `DATABASE_URL`이다.
+- 첫 실행에서 `500 FUNCTION_INVOCATION_FAILED` 발생. 실행 로그의 `ModuleNotFoundError: No module named 'psycopg'`로 요청 드라이버와 설치 패키지의 불일치를 확인했다. 사용자가 Vercel 연결 주소의 드라이버를 `postgresql+psycopg2://`로 명시하고 재배포한 뒤 앱이 정상으로 열리는 것을 확인했다.
+- 사용자 확인: 최초 조회에 지연이 있었지만 배포 앱에 기존 기록이 표시됐다. 지연의 구체적인 원인은 조사하지 않았다. 이는 로컬 파일을 실시간 조회한 것이 아니라 Neon으로 이전한 기록을 읽은 결과다. 로컬 환경변수가 없는 앱은 계속 별도 SQLite를 사용하며 양쪽 DB는 자동 동기화되지 않는다.
+- 아직 남은 확인: 시크릿 창에서 로그인 없이 공개 접근, 배포 앱의 돌아보기 집계와 근거 일치, 서울 날짜 경계에서 지연 수 판단, 배포 앱의 새 기록 저장·재배포 후 유지, 최종 응답·로그·소스·Git 이력의 비밀정보 점검. 최종 결과물 URL과 고정 commit URL 기록, C59 확인 방법 4줄과 C60 AI/본인 판단 3줄 작성도 남아 있다. 실제 공개 URL은 아직 이 대화에 제공되지 않았다.
+- 추가 개선 요청인 달성한 계획의 완료/보관/삭제 및 왼쪽 진행 중 목록 제외는 아직 미구현이다.
+
 ## Neon 이전 준비 — 2026-10-21
 
 - 사용자 확인: SQLite 백업 생성, Git Bash의 `NEON_DATABASE_URL` 설정, Neon `SELECT 1` 연결 및 빈 테이블 목록 확인.
 - `scripts/migrate_to_neon.py` 추가. 기본 실행은 원본 SQLite 읽기 전용 미리보기이며 `--apply`로만 대상 DB에 쓴다. 기존 대상 테이블이 있으면 중단하고, 7개 테이블을 외래키 순서로 복사한 뒤 모든 컬럼 값을 대조한다. PostgreSQL의 다음 ID용 시퀀스를 이전한 ID 이후로 조정한다. 이전 과정은 하나의 대상 트랜잭션으로 처리한다.
-- 임시 SQLite DB로 전체 값·ID·연결 및 원본 파일 보존, 기존 대상 테이블 거부, 중간 저장 실패 롤백 검사 3개 통과. 실제 PostgreSQL/Neon 실행 검증은 아직 하지 않았다.
+- 준비 당시 임시 SQLite DB로 전체 값·ID·연결 및 원본 파일 보존, 기존 대상 테이블 거부, 중간 저장 실패 롤백 검사 3개 통과. 이후 사용자가 실제 Neon 이전과 전체 값 대조 성공을 확인했다(위 배포 기록 참고).
 - 실제 원본 미리보기: 계획 4개, 할 일 5개, 실행 3개, 계획 이력 4개, 회고 1개, 일일 메모 2개, 자료 링크 0개. 이 스크립트 준비 과정에서 개인 DB나 Neon 자료를 변경하지 않았다.
-- 실제 이전 명령(주소를 설정한 같은 Git Bash에서): `./venv/Scripts/python.exe -B -m scripts.migrate_to_neon --apply`. 성공 출력과 테이블별 수량을 확인한 뒤 Vercel 설정으로 진행한다.
+- 실제 이전 명령(사용자 실행 완료): `./venv/Scripts/python.exe -B -m scripts.migrate_to_neon --apply`. 성공 출력과 테이블별 수량 확인 후 Vercel 배포까지 진행했다.
 
 ## 사용자 결정 및 최종 총평에 포함할 사항
 
