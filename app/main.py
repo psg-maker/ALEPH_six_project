@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from app.time_utils import now_in_seoul, today_in_seoul
 from pathlib import Path
 from fastapi import Depends, FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -6,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+
 # ORM 객체와 날짜·시각을 JSON으로 변환 가능한 값으로 바꾼다.
 from fastapi.encoders import jsonable_encoder
 
@@ -32,7 +34,7 @@ templates = Jinja2Templates(directory=APP_DIR / "templates")
 def root(request: Request):
     # 화면의 데이터 변경은 기존 JSON API를 통해 처리한다.
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"today": date.today().isoformat()}
+        request=request, name="index.html", context={"today": today_in_seoul().isoformat()}
     )
 
 @app.post("/plans")
@@ -207,7 +209,7 @@ def get_tasks(
     if overdue_only:
         query = query.filter(
             models.Task.status != "DONE",
-            models.Task.due_date < date.today()
+            models.Task.due_date < today_in_seoul()
         )
 
             # 막힌 이유가 있는 Task만 조회하도록 조건을 추가한다.
@@ -285,7 +287,7 @@ def get_tasks(
 def get_today_tasks(
     db: Session = Depends(get_db)
 ):
-    today = date.today()
+    today = today_in_seoul()
 
     tasks = (
         db.query(models.Task)
@@ -323,7 +325,7 @@ def complete_task(
         }
 
     task.status = "DONE"
-    task.completed_at = datetime.now()
+    task.completed_at = now_in_seoul()
 
     db.commit()
     db.refresh(task)
@@ -688,7 +690,7 @@ def get_plan_summary(
     )
 
         # 서버의 현재 날짜를 기준으로 지연 여부를 판단한다.
-    today = date.today()
+    today = today_in_seoul()
 
     # 해당 Plan에서 미완료이고 마감일이 오늘보다 이전인 Task만 센다.
     # 마감일이 NULL이면 날짜 비교 조건에 해당하지 않아 제외된다.

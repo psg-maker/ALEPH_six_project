@@ -1,5 +1,5 @@
 from datetime import date, datetime
-
+from app.time_utils import now_in_seoul
 from sqlalchemy import Date, DateTime, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,13 +63,13 @@ class Plan(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now
+        default=now_in_seoul
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now,
-        onupdate=datetime.now
+        default=now_in_seoul,
+        onupdate=now_in_seoul
     )
 
 class PlanVersion(Base):
@@ -138,7 +138,7 @@ class PlanVersion(Base):
 
     changed_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now
+        default=now_in_seoul
     )
 
 class Task(Base):
@@ -203,13 +203,13 @@ class Task(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now
+        default=now_in_seoul
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now,
-        onupdate=datetime.now
+        default=now_in_seoul,
+        onupdate=now_in_seoul
     )
 
 class TaskLink(Base):
@@ -244,7 +244,7 @@ class TaskLink(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now
+        default=now_in_seoul
     )
 
 class Execution(Base):
@@ -290,7 +290,7 @@ class Execution(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now
+        default=now_in_seoul
     )
 
 class Review(Base):
@@ -330,13 +330,13 @@ class Review(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now
+        default=now_in_seoul
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now,
-        onupdate=datetime.now
+        default=now_in_seoul,
+        onupdate=now_in_seoul
     )
 
 class DailyNote(Base):
@@ -361,12 +361,12 @@ class DailyNote(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now
+        default=now_in_seoul
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.now,
-        onupdate=datetime.now
+        default=now_in_seoul,
+        onupdate=now_in_seoul
     )
 

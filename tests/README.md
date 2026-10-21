@@ -32,6 +32,7 @@ node tests/test_insights_dom.cjs
 node tests/test_review_dom.cjs
 node tests/test_daily_note_dom.cjs
 node tests/test_plan_edit_dom.cjs
+node tests/test_sort_dom.cjs
 ```
 
 계획 수정 테스트는 기존 값 표시, 취소, 저장 실패 후 초안 보존과 재시도, 중복 제출 방지, 수정 전 이력, ID·상태·연결된 할 일 보존과 추가 모드 복원을 확인합니다.

@@ -94,6 +94,19 @@
   function renderTasks() {
     const keyword = $('search').value.trim().toLocaleLowerCase(); const status = $('status-filter').value;
     const visible = state.tasks.filter(task => (!status || task.status === status) && (!keyword || `${task.title} ${task.description || ''}`.toLocaleLowerCase().includes(keyword)));
+    const field = $('sort-by').value; const descending = $('sort-order').value === 'desc';
+    // DB의 조회 순서와 무관하게 현재 목록을 정렬한다. 원본 배열은 변경하지 않는다.
+    visible.sort((a, b) => {
+      const left = a[field], right = b[field];
+      const leftEmpty = left == null || left === '', rightEmpty = right == null || right === '';
+      if (leftEmpty !== rightEmpty) return leftEmpty ? 1 : -1;
+      let result = 0;
+      if (!leftEmpty) result = field === 'expected_minutes' ? Number(left) - Number(right) : left < right ? -1 : left > right ? 1 : 0;
+      // 오름/내림 어느 쪽에서도 동률은 ID 오름차순, 미입력은 마지막이다.
+      return (descending ? -result : result) || a.id - b.id;
+    });
+    const sortLabel = $('sort-by').selectedOptions[0].textContent;
+    $('sort-help').textContent = `현재 목록: ${sortLabel} ${descending ? '내림차순 (큰 값·최근 날짜 먼저)' : '오름차순 (작은 값·이른 날짜 먼저)'}. 같은 값은 ID가 작은 순서, 미입력은 마지막입니다.`;
     const list = $('task-list'); list.replaceChildren(); $('list-count').textContent = visible.length;
     if (!visible.length) {
       const text = state.tasks.length ? '조건에 맞는 할 일이 없습니다.' : state.view === 'today' ? '오늘 예정된 할 일이 없습니다. 작은 일 하나부터 추가해보세요.' : '아직 할 일이 없습니다. 첫 할 일을 추가해보세요.';
@@ -298,6 +311,7 @@
   document.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', () => $(button.dataset.close).close()));
   document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => changeView(button.dataset.view)));
   $('search').addEventListener('input', renderTasks); $('status-filter').addEventListener('change', renderTasks);
+  $('sort-by').addEventListener('change', renderTasks); $('sort-order').addEventListener('change', renderTasks);
   $('refresh').addEventListener('click', load); $('retry').addEventListener('click', load);
   document.addEventListener('aleph:open-execution', event => {
     const task = event.detail;

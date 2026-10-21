@@ -29,6 +29,7 @@
   <div class="workspace">
     <header class="app-bar"><span>나의 워크스페이스 <span class="crumb">/</span> <span id="breadcrumb">오늘</span></span><span class="private-label">MY PLANNER</span></header>
     <main id="main">
+      <p id="public-access-notice" class="public-access-notice">지금은 로그인이 없어 링크를 아는 사람은 누구나 볼 수 있습니다. 남이 봐도 괜찮은 내용만 넣으세요.</p>
       <header class="page-heading"><div><p id="date-label" class="eyebrow"></p><h1 id="page-title">오늘, 한 걸음 더.</h1><p id="page-caption">계획을 실행으로 바꾸는 작은 체크.</p></div><button class="primary" id="add-task">＋ 할 일 추가</button></header>
       <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
       <div id="load-error" class="error-box" role="alert" hidden><span id="load-error-text"></span><button id="retry" class="secondary">다시 시도</button></div>
@@ -41,6 +42,8 @@
         <section class="task-panel" id="task-panel" aria-labelledby="list-title">
           <div class="panel-heading"><h2 id="list-title">오늘의 체크리스트</h2><span class="count-badge" id="list-count">0</span><button class="text-button" id="refresh" aria-label="목록 새로고침">↻ 새로고침</button></div>
           <div class="filters"><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="할 일 검색" aria-label="할 일 제목과 내용 검색"></label><select id="status-filter" aria-label="완료 상태"><option value="">모든 상태</option><option value="TODO">미완료</option><option value="DONE">완료</option></select></div>
+          <div class="sort-controls"><label>정렬 기준<select id="sort-by" aria-describedby="sort-help"><option value="scheduled_date">예정일</option><option value="due_date">마감일</option><option value="expected_minutes">예상 시간</option><option value="created_at">생성 시각</option></select></label><label>순서<select id="sort-order" aria-describedby="sort-help"><option value="asc">오름차순</option><option value="desc">내림차순</option></select></label></div>
+          <p id="sort-help" class="sort-help"></p>
           <div id="task-list" aria-live="polite" aria-busy="true"><p class="empty">할 일을 불러오고 있습니다…</p></div>
           <div class="panel-footer">체크하면 완료, 다시 누르면 미완료로 돌아갑니다.</div>
         </section>

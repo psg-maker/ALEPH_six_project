@@ -49,6 +49,24 @@ async function api(path) { return (await fetch(base+path)).json(); }
   assert(d.querySelector('#plan-history-list').textContent.includes(before.success_criteria));
   assert.equal(d.querySelectorAll('#plan-history-list script').length,0);
   d.querySelector('[data-close="plan-history-dialog"]').click();
+  // 저장 후 다시 수정해도 현재 값이 채워지고, 이전 이력은 누적되어야 한다.
+  d.querySelector('.plan-edit').click();
+  assert.equal(form.elements.title.value,after.title);
+  assert.equal(form.elements.description.value,after.description??'');
+  form.elements.description.value='second edit description';
+  form.dispatchEvent(new w.Event('submit',{cancelable:true}));
+  await wait(()=>!d.querySelector('#plan-dialog').open && !form.querySelector('[type=submit]').disabled);
+  const twice=(await api('/plans')).find(p=>p.id===before.id);
+  assert.equal(twice.description,'second edit description');
+  const historyTwice=await api(`/plans/${before.id}/versions`);
+  assert.equal(historyTwice.length,history.length+1);
+  assert.deepEqual(historyTwice.slice(0,-1),history);
+  assert.equal(historyTwice.at(-1).title,after.title);
+  assert.equal(historyTwice.at(-1).description,after.description);
+  d.querySelector('.plan-edit').click();
+  assert.equal(form.elements.description.value,twice.description);
+  d.querySelector('[data-close="plan-dialog"]').click();
+  console.log('PASS repeat edit prefill, current description and all prior history preserved');
   d.querySelector('#add-plan').click();
   assert.equal(form.elements.title.value,'');
   console.log('PASS Plan prefill/cancel/failure/retry, old snapshot, same ID/status/Tasks, history and create reset');

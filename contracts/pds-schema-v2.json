@@ -1,0 +1,560 @@
+{
+  "contract_version": "2",
+  "project": "ALEPH_six_project",
+  "kind": "database-contract",
+  "database": {
+    "engine": "SQLite",
+    "url": "sqlite:///./planner.db",
+    "path_base": "process working directory",
+    "foreign_keys": "PRAGMA foreign_keys=ON on every SQLAlchemy connection"
+  },
+  "time_rules": {
+    "date": "YYYY-MM-DD",
+    "datetime": "ISO 8601 without timezone offset",
+    "clock": "server local date.today()/datetime.now(); no explicit Asia/Seoul conversion yet",
+    "input_clock": "datetime-local values stored as entered, timezone-aware execution input rejected",
+    "duration_unit": "integer minutes",
+    "actual_minutes": "manual input; not calculated from timestamps",
+    "difference_minutes": "actual minus expected",
+    "deployment_todo": "define and enforce Korea timezone before deployment"
+  },
+  "tables": {
+    "daily_notes": {
+      "columns": {
+        "id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": false,
+          "references": []
+        },
+        "note_date": {
+          "type": "DATE",
+          "nullable": false,
+          "primary_key": false,
+          "unique": true,
+          "references": []
+        },
+        "content": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "created_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        },
+        "updated_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        }
+      }
+    },
+    "executions": {
+      "columns": {
+        "id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": false,
+          "references": []
+        },
+        "task_id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [
+            "tasks.id"
+          ]
+        },
+        "started_at": {
+          "type": "DATETIME",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "ended_at": {
+          "type": "DATETIME",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "actual_minutes": {
+          "type": "INTEGER",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "memo": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "blocked_reason": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "created_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        }
+      }
+    },
+    "plan_versions": {
+      "columns": {
+        "id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": false,
+          "references": []
+        },
+        "plan_id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [
+            "plans.id"
+          ]
+        },
+        "version_no": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "title": {
+          "type": "VARCHAR(200)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "description": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "category": {
+          "type": "VARCHAR(50)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "start_date": {
+          "type": "DATE",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "end_date": {
+          "type": "DATE",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "priority": {
+          "type": "VARCHAR(20)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "success_criteria": {
+          "type": "TEXT",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "expected_minutes": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "status": {
+          "type": "VARCHAR(20)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "changed_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        }
+      }
+    },
+    "plans": {
+      "columns": {
+        "id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": false,
+          "references": []
+        },
+        "title": {
+          "type": "VARCHAR(200)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "description": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "category": {
+          "type": "VARCHAR(50)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "start_date": {
+          "type": "DATE",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "end_date": {
+          "type": "DATE",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "priority": {
+          "type": "VARCHAR(20)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "success_criteria": {
+          "type": "TEXT",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "expected_minutes": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "status": {
+          "type": "VARCHAR(20)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "ACTIVE"
+        },
+        "created_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        },
+        "updated_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        }
+      }
+    },
+    "reviews": {
+      "columns": {
+        "id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": false,
+          "references": []
+        },
+        "plan_id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": true,
+          "references": [
+            "plans.id"
+          ]
+        },
+        "reflection": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "improvement": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "next_action": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "next_plan_id": {
+          "type": "INTEGER",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": [
+            "plans.id"
+          ]
+        },
+        "created_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        },
+        "updated_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        }
+      }
+    },
+    "task_links": {
+      "columns": {
+        "id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": false,
+          "references": []
+        },
+        "task_id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [
+            "tasks.id"
+          ]
+        },
+        "label": {
+          "type": "VARCHAR(200)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "url": {
+          "type": "TEXT",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "link_type": {
+          "type": "VARCHAR(30)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "web"
+        },
+        "created_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        }
+      }
+    },
+    "tasks": {
+      "columns": {
+        "id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": false,
+          "references": []
+        },
+        "plan_id": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [
+            "plans.id"
+          ]
+        },
+        "title": {
+          "type": "VARCHAR(200)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "description": {
+          "type": "TEXT",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "scheduled_date": {
+          "type": "DATE",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "due_date": {
+          "type": "DATE",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "priority": {
+          "type": "VARCHAR(20)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "status": {
+          "type": "VARCHAR(20)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "TODO"
+        },
+        "tag": {
+          "type": "VARCHAR(50)",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "expected_minutes": {
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "completed_at": {
+          "type": "DATETIME",
+          "nullable": true,
+          "primary_key": false,
+          "unique": false,
+          "references": []
+        },
+        "created_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        },
+        "updated_at": {
+          "type": "DATETIME",
+          "nullable": false,
+          "primary_key": false,
+          "unique": false,
+          "references": [],
+          "default": "server local datetime.now"
+        }
+      }
+    }
+  },
+  "rules": {
+    "plan_dates": "end_date >= start_date enforced by request schemas",
+    "plan_history": "each successful PUT snapshots the previous Plan; current Plan is not a history row; no history restore API",
+    "task_completion": "repeat complete preserves completed_at and creates no Execution; reopen clears completed_at",
+    "task_delete": "API transaction deletes TaskLinks, Executions, then Task; failure rolls back; other records preserved",
+    "plan_delete": "no API; no configured ON DELETE CASCADE",
+    "daily_note": "one row per date; PUT replaces content; empty string allowed; unwritten GET returns null",
+    "review": "one row per Plan; PUT replaces fields; omitted fields become null",
+    "next_plan": "creates a Plan with saved improvement/action appended to description and links Review; duplicate link rejected",
+    "summary_scope": "all Tasks in selected Plan, not arbitrary date range",
+    "overdue": "status != DONE and due_date < server today",
+    "blocked": "distinct Task IDs with any Execution blocked_reason.strip() nonempty, including DONE Tasks",
+    "expected_minutes": "sum Task.expected_minutes, not Plan.expected_minutes",
+    "actual_minutes": "sum associated Execution.actual_minutes, null treated as zero",
+    "empty_summary": "counts and minute sums zero; completion_rate zero",
+    "validation": "API validation and DB null/foreign key/unique constraints are distinct; ge=0 and title length are request validation, not DB CHECK constraints",
+    "export": "GET /export returns all seven tables sorted by ID as planner-export.json; no import endpoint",
+    "migration": "create_all creates missing tables but does not add columns to existing tables; older executions tables may need blocked_reason TEXT after backup"
+  },
+  "export_keys": [
+    "plans",
+    "plan_versions",
+    "tasks",
+    "task_links",
+    "executions",
+    "reviews",
+    "daily_notes"
+  ]
+}

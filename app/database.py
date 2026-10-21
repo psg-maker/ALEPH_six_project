@@ -1,19 +1,28 @@
+import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 # 어떤 DB를 사용할지 지정 -> 현: SQLite의 planner.db
 
-DATABASE_URL = "sqlite:///./planner.db"
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "sqlite:///./planner.db"
+)
+
+# 현재 연결 대상이 SQLite인지 확인한다.
+is_sqlite = DATABASE_URL.startswith("sqlite:")
 
 # python과 DB를 실제로 연결하는 통로
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    # SQLite에만 필요한 옵션
+    connect_args={"check_same_thread": False} if is_sqlite else {},
+    pool_pre_ping=True,
 )
 
 # engine이 새 DB 연결을 만들 때마다 아래 함수를 실행한다.
-@event.listens_for(engine, "connect")
+
 def enable_sqlite_foreign_keys(dbapi_connection, connection_record):
     # dbapi_connection: SQLite에 직접 명령을 보낼 수 있는 실제 연결
     # connection_record: SQLAlchemy가 연결을 관리하는 객체. 여기서는 사용하지 않는다.
@@ -31,6 +40,10 @@ def enable_sqlite_foreign_keys(dbapi_connection, connection_record):
         cursor.close()
 
 # SessionLocal = DB 조회/추가/수정/삭제할 때 사용하는 세션
+# SQLite일 때만 외래키 활성화 함수를 등록한다.
+# PostgreSQL은 외래키를 자체적으로 검사한다.
+if is_sqlite:
+    event.listen(engine, "connect", enable_sqlite_foreign_keys)
 
 SessionLocal = sessionmaker(
     bind=engine,
