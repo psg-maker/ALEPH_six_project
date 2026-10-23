@@ -1,12 +1,22 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
 from app.time_utils import now_in_seoul, today_in_seoul
 from pathlib import Path
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+from app.security import (
+    hash_password,
+    verify_password,
+    DUMMY_PASSWORD_HASH,
+    generate_session_token,
+    hash_session_token,
+)
+from sqlalchemy.exc import IntegrityError
 
 # ORM 객체와 날짜·시각을 JSON으로 변환 가능한 값으로 바꾼다.
 from fastapi.encoders import jsonable_encoder
@@ -23,6 +33,337 @@ from app.database import Base, engine, get_db
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# 입력 검증에 실패했을 때 실행할 함수
+@app.exception_handler(RequestValidationError)
+async def handle_validation_error(request: Request, exc: RequestValidationError):
+    # 가입·로그인 API는 /auth/ 아래에 만들 예정이다.
+    if request.url.path.startswith("/auth/"):
+        # 입력한 비밀번호나 오류 원문을 응답에 넣지 않는다.
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "아이디 또는 비밀번호의 입력 형식을 확인해주세요."}
+        )
+
+    # 기존 계획·할 일 API의 오류 처리는 유지한다.
+    return await request_validation_exception_handler(request, exc)
+
+@app.post("/auth/register", response_model=schemas.UserRead, status_code=201)
+def register_user(
+    user: schemas.UserCreate,
+    db: Session = Depends(get_db)
+):
+    # 1. 같은 아이디가 이미 있는지 확인한다.
+    existing_user = (
+        db.query(models.User)
+        .filter(models.User.username == user.username)
+        .first()
+    )
+
+    if existing_user is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="이미 사용 중인 아이디입니다."
+        )
+
+    # 2. SecretStr에서 비밀번호를 꺼내 해시로 변환한다.
+    new_user = models.User(
+        username=user.username,
+        password_hash=hash_password(user.password.get_secret_value())
+    )
+
+    # 3. DB에 저장한다.
+    db.add(new_user)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        # 동시에 같은 아이디로 가입해도 DB 고유 조건이 막는다.
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="이미 사용 중인 아이디입니다."
+        ) from None
+
+    # 4. DB에서 생성한 ID와 가입 시각을 가져온다.
+    db.refresh(new_user)
+
+    # 5. 비밀번호와 해시는 응답에 포함하지 않는다.
+    return {
+        "id": new_user.id,
+        "username": new_user.username,
+        "created_at": new_user.created_at
+    }
+
+
+# 가입 함수와 독립된 함수: 이후 로그인 API에서 호출한다.
+def authenticate_user(
+    credentials: schemas.UserLogin,
+    db: Session
+) -> models.User:
+    account = (
+        db.query(models.User)
+        .filter(models.User.username == credentials.username)
+        .first()
+    )
+
+    # 계정이 없어도 해시 검사는 수행한다.
+    stored_hash = (
+        account.password_hash
+        if account is not None
+        else DUMMY_PASSWORD_HASH
+    )
+
+    password_matches = verify_password(
+        credentials.password.get_secret_value(),
+        stored_hash
+    )
+
+    # 아이디가 없거나 비밀번호가 틀려도 같은 응답을 사용한다.
+    if account is None or not password_matches:
+        raise HTTPException(
+            status_code=401,
+            detail="아이디 또는 비밀번호가 올바르지 않습니다."
+        )
+
+    return account
+
+# 서버와 쿠키에서 함께 사용할 세션 유효기간: 12시간
+SESSION_TTL_SECONDS = 12 * 60 * 60
+
+
+# 로그인한 사용자의 세션을 저장한다.
+def create_auth_session(
+    account: models.User,
+    db: Session
+) -> tuple[str, datetime]:
+    token = generate_session_token()
+
+    created_at = now_in_seoul()
+    expires_at = created_at + timedelta(seconds=SESSION_TTL_SECONDS)
+
+    session = models.AuthSession(
+        user_id=account.id,
+        session_hash=hash_session_token(token),
+        created_at=created_at,
+        expires_at=expires_at
+    )
+
+    try:
+        db.add(session)
+        db.commit()
+    except Exception:
+        # 저장에 실패하면 이번 변경을 취소한다.
+        db.rollback()
+        raise
+
+    # 원문은 이후 쿠키 전달에, 만료 시각은 응답에 사용한다.
+    return token, expires_at
+
+@app.post("/auth/login", response_model=schemas.LoginRead)
+def login_user(
+    credentials: schemas.UserLogin,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    # 브라우저가 보낸 요청 출처가 있으면 같은 사이트인지 확인한다.
+    origin = request.headers.get("origin")
+    expected_origin = f"{request.url.scheme}://{request.url.netloc}"
+
+    if origin is not None and origin != expected_origin:
+        raise HTTPException(
+            status_code=403,
+            detail="허용되지 않은 요청 출처입니다."
+        )
+
+    # 1. 아이디·비밀번호를 확인한다. 실패하면 여기서 중단된다.
+    account = authenticate_user(credentials, db)
+
+    # 2. 로그인 세션을 DB에 저장한다.
+    token, expires_at = create_auth_session(account, db)
+
+    # 3. 세션 원문을 브라우저 쿠키로 전달한다.
+    response.set_cookie(
+        key="aleph_session",
+        value=token,
+        httponly=True,
+        secure=request.url.scheme == "https",
+        samesite="lax",
+        max_age=SESSION_TTL_SECONDS,
+        path="/"
+    )
+    response.headers["Cache-Control"] = "no-store"
+
+    # 4. JSON에는 공개 정보만 반환한다.
+    return {
+        "user": {
+            "id": account.id,
+            "username": account.username,
+            "created_at": account.created_at
+        },
+        "expires_at": expires_at
+    }
+
+# 요청의 쿠키를 검사해 현재 로그인한 사용자를 반환한다.
+def get_current_user(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> models.User:
+    token = request.cookies.get("aleph_session")
+
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="로그인이 필요합니다."
+        )
+
+    # 같은 해시이며, 폐기되지 않았고, 아직 만료되지 않은 세션만 찾는다.
+    session = (
+        db.query(models.AuthSession)
+        .filter(
+            models.AuthSession.session_hash == hash_session_token(token),
+            models.AuthSession.revoked_at.is_(None),
+            models.AuthSession.expires_at > now_in_seoul()
+        )
+        .first()
+    )
+
+    if session is None:
+        raise HTTPException(
+            status_code=401,
+            detail="로그인이 필요합니다."
+        )
+
+    # 세션에 연결된 사용자 정보를 가져온다.
+    account = db.get(models.User, session.user_id)
+
+    if account is None:
+        raise HTTPException(
+            status_code=401,
+            detail="로그인이 필요합니다."
+        )
+
+    return account
+
+@app.get("/auth/me", response_model=schemas.UserRead)
+def read_current_user(
+    response: Response,
+    account: models.User = Depends(get_current_user)
+):
+    response.headers["Cache-Control"] = "no-store"
+
+    return {
+        "id": account.id,
+        "username": account.username,
+        "created_at": account.created_at
+    }
+
+@app.post("/auth/logout")
+def logout_user(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    # 다른 사이트에서 보낸 로그아웃 요청을 거절한다.
+    origin = request.headers.get("origin")
+    expected_origin = f"{request.url.scheme}://{request.url.netloc}"
+
+    if origin is not None and origin != expected_origin:
+        raise HTTPException(
+            status_code=403,
+            detail="허용되지 않은 요청 출처입니다."
+        )
+
+    token = request.cookies.get("aleph_session")
+
+    if token:
+        try:
+            # 현재 쿠키에 해당하는 세션만 폐기한다.
+            db.query(models.AuthSession).filter(
+                models.AuthSession.session_hash == hash_session_token(token),
+                models.AuthSession.revoked_at.is_(None)
+            ).update(
+                {models.AuthSession.revoked_at: now_in_seoul()},
+                synchronize_session=False
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+    # 브라우저에도 이 쿠키를 지우라고 전달한다.
+    response.delete_cookie(
+        key="aleph_session",
+        path="/",
+        httponly=True,
+        secure=request.url.scheme == "https",
+        samesite="lax"
+    )
+    response.headers["Cache-Control"] = "no-store"
+
+    return {"message": "로그아웃했습니다."}
+
+@app.post("/auth/change-password")
+def change_password(
+    data: schemas.PasswordChange,
+    request: Request,
+    response: Response,
+    account: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # 다른 사이트에서 보낸 변경 요청을 거절한다.
+    origin = request.headers.get("origin")
+    expected_origin = f"{request.url.scheme}://{request.url.netloc}"
+
+    if origin is not None and origin != expected_origin:
+        raise HTTPException(
+            status_code=403,
+            detail="허용되지 않은 요청 출처입니다."
+        )
+
+    # 현재 비밀번호를 알고 있는지 확인한다.
+    if not verify_password(
+        data.current_password.get_secret_value(),
+        account.password_hash
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="현재 비밀번호가 올바르지 않습니다."
+        )
+
+    new_hash = hash_password(data.new_password.get_secret_value())
+
+    try:
+        # 새 비밀번호 해시로 교체한다.
+        account.password_hash = new_hash
+
+        # 이 사용자의 기존 세션을 모두 폐기한다.
+        db.query(models.AuthSession).filter(
+            models.AuthSession.user_id == account.id,
+            models.AuthSession.revoked_at.is_(None)
+        ).update(
+            {models.AuthSession.revoked_at: now_in_seoul()},
+            synchronize_session=False
+        )
+
+        # 비밀번호 변경과 세션 폐기를 함께 확정한다.
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    response.delete_cookie(
+        key="aleph_session",
+        path="/",
+        httponly=True,
+        secure=request.url.scheme == "https",
+        samesite="lax"
+    )
+    response.headers["Cache-Control"] = "no-store"
+
+    return {"message": "비밀번호를 변경했습니다. 다시 로그인해주세요."}
+
 
 # 실행 위치에 관계없이 app 폴더의 화면과 정적 파일을 찾는다.
 APP_DIR = Path(__file__).resolve().parent

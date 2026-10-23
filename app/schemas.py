@@ -1,8 +1,41 @@
 from datetime import date, datetime
-
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, HttpUrl, SecretStr, model_validator, field_validator
 
 # Field -> 입력 필드의 검증 조건 등을 지정한다.
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=1, max_length=50)
+    # 비밀번호는 공백을 포함해 입력 그대로 15~128자를 허용한다.
+    password: SecretStr = Field(min_length=15, max_length=128)
+    @field_validator("username", mode="before")
+    @classmethod
+    def strip_username(cls, value):
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+class UserLogin(UserCreate):
+    pass
+
+# UserCreate → 서버가 받는 것: username, password
+# UserRead   → 서버가 돌려주는 것: id, username, created_at
+class UserRead(BaseModel):
+    id: int
+    username: str
+    created_at: datetime
+
+# 로그인 성공 시 돌려줄 공개 정보
+class LoginRead(BaseModel):
+    user: UserRead
+    expires_at: datetime
+
+# 비밀번호 변경 요청으로 받을 정보
+class PasswordChange(BaseModel):
+    # 실제로 맞는지는 서버에서 기존 해시로 검사한다.
+    current_password: SecretStr = Field(min_length=1, max_length=128)
+
+    # 새 비밀번호에는 현재 가입 정책을 적용한다.
+    new_password: SecretStr = Field(min_length=15, max_length=128)
 
 # 사용자에게 어떤 데이터를 받을지 정의한다.
 class PlanCreate(BaseModel):

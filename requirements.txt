@@ -16,3 +16,4 @@ uvicorn==0.54.0
 Jinja2==3.1.6
 MarkupSafe==3.0.4
 psycopg2-binary==2.9.13
+pwdlib[argon2]==0.3.1
