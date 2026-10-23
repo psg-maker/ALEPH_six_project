@@ -1,4 +1,4 @@
-# ALEPH — 내 계획과 실제를 담는 앱
+# ALEPH — 내 계획과 실행을 담는 앱
 
 FastAPI · SQLAlchemy로 만든 Plan → Do → See 기록 앱입니다. Vercel에서 화면과 API를 제공하고 Neon PostgreSQL에 배포 데이터를 저장합니다. 로컬 개발 기본 DB는 SQLite입니다. 로그인 없이 링크를 아는 사람이 자료를 조회·변경·삭제할 수 있습니다.
 
