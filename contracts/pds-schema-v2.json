@@ -549,7 +549,7 @@
   "rules": {
     "plan_dates": "end_date >= start_date enforced by request schemas",
     "plan_history": "each successful PUT snapshots the previous Plan; current Plan is not a history row; no history restore API",
-    "task_completion": "repeat complete preserves completed_at and creates no Execution; reopen clears completed_at",
+    "task_completion": "Task.id primary key identifies one completion target; status/completed_at store completion; conditional UPDATE WHERE id matches AND status != DONE records only the first concurrent completion; repeat complete preserves completed_at and creates no Execution; reopen clears completed_at; no separate UUID request ledger; SQLite concurrency verified, current Vercel app client-concurrent requests passed with identical timestamps and completed count +1; local fix deployment and server-side overlap not established",
     "task_delete": "API transaction deletes TaskLinks, Executions, then Task; failure rolls back; other records preserved",
     "plan_delete": "no API; no configured ON DELETE CASCADE",
     "daily_note": "one row per date; PUT replaces content; empty string allowed; unwritten GET returns null",

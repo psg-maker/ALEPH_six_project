@@ -337,10 +337,23 @@ def complete_task(
             "completed_at": task.completed_at
         }
 
-    task.status = "DONE"
-    task.completed_at = now_in_seoul()
+    # Task의 PK가 같은 완료 대상을 식별한다. DB의 조건부 UPDATE로
+    # 두 요청이 모두 TODO를 읽었어도 첫 요청만 완료 시각을 기록한다.
+    # 실제 시간 입력용 Execution은 완료 체크와 별개로 보존한다.
+    try:
+        db.query(models.Task).filter(
+            models.Task.id == task_id,
+            models.Task.status != "DONE",
+        ).update(
+            {models.Task.status: "DONE", models.Task.completed_at: now_in_seoul()},
+            synchronize_session=False,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
-    db.commit()
+    # 다른 요청이 먼저 완료했을 때도 DB에 확정된 같은 값을 반환한다.
     db.refresh(task)
 
     return {
