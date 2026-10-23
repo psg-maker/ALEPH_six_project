@@ -1,0 +1,225 @@
+{
+  "base": "https://aleph-six-project.vercel.app",
+  "checked_at": "2026-10-23T10:49:20.293734",
+  "requests": {
+    "/": {
+      "status": 200,
+      "ms": 6664,
+      "url": "https://aleph-six-project.vercel.app/",
+      "type": "text/html; charset=utf-8",
+      "attachment": null
+    },
+    "/export": {
+      "status": 200,
+      "ms": 2287,
+      "url": "https://aleph-six-project.vercel.app/export",
+      "type": "application/json",
+      "attachment": "attachment; filename=\"planner-export.json\""
+    },
+    "/openapi.json": {
+      "status": 200,
+      "ms": 297,
+      "url": "https://aleph-six-project.vercel.app/openapi.json",
+      "type": null,
+      "attachment": null
+    },
+    "/static/planner.js": {
+      "status": 200,
+      "ms": 41,
+      "url": "https://aleph-six-project.vercel.app/static/planner.js",
+      "type": null,
+      "attachment": null
+    },
+    "/static/insights.js": {
+      "status": 200,
+      "ms": 42,
+      "url": "https://aleph-six-project.vercel.app/static/insights.js",
+      "type": null,
+      "attachment": null
+    }
+  },
+  "plans": [
+    {
+      "id": 1,
+      "tasks": 0,
+      "executions": 0,
+      "summary": {
+        "plan_id": 1,
+        "task_count": 0,
+        "completed_task_count": 0,
+        "completion_rate": 0.0,
+        "blocked_task_count": 0,
+        "overdue_task_count": 0,
+        "expected_minutes": 0,
+        "actual_minutes": 0,
+        "difference_minutes": 0
+      },
+      "summary_matches_export": true,
+      "summary_ms": 7997,
+      "versions": 3,
+      "reviews": 0,
+      "executions_matches_export": true,
+      "versions_matches_export": true,
+      "review_matches_export": true,
+      "tasks_match_export": true
+    },
+    {
+      "id": 2,
+      "tasks": 0,
+      "executions": 0,
+      "summary": {
+        "plan_id": 2,
+        "task_count": 0,
+        "completed_task_count": 0,
+        "completion_rate": 0.0,
+        "blocked_task_count": 0,
+        "overdue_task_count": 0,
+        "expected_minutes": 0,
+        "actual_minutes": 0,
+        "difference_minutes": 0
+      },
+      "summary_matches_export": true,
+      "summary_ms": 2235,
+      "versions": 0,
+      "reviews": 1,
+      "executions_matches_export": true,
+      "versions_matches_export": true,
+      "review_matches_export": true,
+      "tasks_match_export": true
+    },
+    {
+      "id": 3,
+      "tasks": 5,
+      "executions": 3,
+      "summary": {
+        "plan_id": 3,
+        "task_count": 5,
+        "completed_task_count": 3,
+        "completion_rate": 60.0,
+        "blocked_task_count": 1,
+        "overdue_task_count": 0,
+        "expected_minutes": 310,
+        "actual_minutes": 60,
+        "difference_minutes": -250
+      },
+      "summary_matches_export": true,
+      "summary_ms": 7920,
+      "versions": 1,
+      "reviews": 0,
+      "executions_matches_export": true,
+      "versions_matches_export": true,
+      "review_matches_export": true,
+      "tasks_match_export": true
+    },
+    {
+      "id": 4,
+      "tasks": 0,
+      "executions": 0,
+      "summary": {
+        "plan_id": 4,
+        "task_count": 0,
+        "completed_task_count": 0,
+        "completion_rate": 0.0,
+        "blocked_task_count": 0,
+        "overdue_task_count": 0,
+        "expected_minutes": 0,
+        "actual_minutes": 0,
+        "difference_minutes": 0
+      },
+      "summary_matches_export": true,
+      "summary_ms": 7864,
+      "versions": 0,
+      "reviews": 0,
+      "executions_matches_export": true,
+      "versions_matches_export": true,
+      "review_matches_export": true,
+      "tasks_match_export": true
+    }
+  ],
+  "notice_present": true,
+  "server_today": "2026-10-23",
+  "summary_query_parameters": [
+    "plan_id"
+  ],
+  "date_range_parameters": [],
+  "safe_task_rendering": true,
+  "script_innerhtml_uses": 1,
+  "table_counts": {
+    "plans": 4,
+    "plan_versions": 4,
+    "tasks": 5,
+    "task_links": 0,
+    "executions": 3,
+    "reviews": 1,
+    "daily_notes": 3
+  },
+  "orphan_counts": {
+    "tasks.plan_id": 0,
+    "plan_versions.plan_id": 0,
+    "executions.task_id": 0,
+    "task_links.task_id": 0,
+    "reviews.plan_id": 0,
+    "reviews.next_plan_id": 0
+  },
+  "repeat_export_identical": true,
+  "linked_next_plans": [
+    {
+      "plan_id": 2,
+      "next_plan_id": 4
+    }
+  ],
+  "dangerous_literal_record_count": 0,
+  "exposure_probes": {
+    "/.env": {
+      "status": 404,
+      "bytes": 22
+    },
+    "/.git/config": {
+      "status": 404,
+      "bytes": 22
+    },
+    "/planner.db": {
+      "status": 404,
+      "bytes": 22
+    },
+    "/contracts/pds-schema-v2.json": {
+      "status": 404,
+      "bytes": 22
+    }
+  },
+  "notice_element_present": true,
+  "execution_fields_populated": {
+    "started_at": 2,
+    "ended_at": 2,
+    "actual_minutes": 3,
+    "blocked_reason": 1
+  },
+  "next_plan_improvement_in_description": [
+    {
+      "review_keys": [
+        "improvement",
+        "next_plan_id",
+        "created_at",
+        "updated_at",
+        "reflection",
+        "id",
+        "plan_id",
+        "next_action"
+      ],
+      "improvement_nonempty": true,
+      "included": true
+    }
+  ],
+  "github_public_checks": [
+    {
+      "url": "https://github.com/psg-maker/ALEPH_six_project",
+      "status": 200,
+      "final_url": "https://github.com/psg-maker/ALEPH_six_project"
+    },
+    {
+      "url": "https://github.com/psg-maker/ALEPH_six_project/commit/9edc04e72671e9494fc338637c1c003f95bd6156",
+      "status": 200,
+      "final_url": "https://github.com/psg-maker/ALEPH_six_project/commit/9edc04e72671e9494fc338637c1c003f95bd6156"
+    }
+  ]
+}

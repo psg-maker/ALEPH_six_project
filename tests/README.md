@@ -29,6 +29,7 @@ node tests/test_task_edit_dom.cjs
 node tests/test_execution_dom.cjs
 node tests/test_task_link_dom.cjs
 node tests/test_insights_dom.cjs
+node tests/test_insights_period_dom.cjs
 node tests/test_review_dom.cjs
 node tests/test_daily_note_dom.cjs
 node tests/test_plan_edit_dom.cjs
@@ -62,6 +63,11 @@ Plan/완료 상태/완료 시각/연결 기록 보존 및 추가 모드 복귀�
 돌아보기 테스트는 Plan별 집계 카드/완료율, 전체·완료·지연·막힘 숫자의 Task 근거 목록,
 막힘 중복 제거/이유 표시, 실행 이력 열기, 예상·실제·차이의 근거 합계 일치,
 빈 Plan, 집계/근거 조회 실패·재시도, 기존 화면 복귀를 검증합니다.
+
+기간별 돌아보기 테스트는 예정일의 양끝 포함, 기간 밖 실행일의 기록 포함, 모든 수치와 근거 일치,
+적용 전 초안 분리, 역전 날짜 거부, 같은 날·한쪽 날짜·빈 기간·전체 초기화, 이전 기간의 늦은 응답 차단,
+오류 후 재시도·Plan 변경 시 적용 기간 유지와 조회 전후 DB 불변을 검증합니다.
+Python 테스트에도 기간 경계·잘못된 날짜·필터 조합·없는 Plan·다른 Plan 제외와 데이터 불변 검사가 포함됩니다.
 
 회고 테스트는 미작성/저장/저장 실패 시 초안 유지, 개선점 필수 검사, 다음 계획의 설명
 미리보기·취소·생성 실패·재시도·중복 제출 방지, 원본 Plan 보존, 다음 Plan 연결 유지와

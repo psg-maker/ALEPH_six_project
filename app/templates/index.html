@@ -51,6 +51,8 @@
       </div>
       <section id="insights-view" aria-labelledby="insight-title" hidden>
         <div class="insight-toolbar"><label for="insight-plan" id="insight-title">돌아볼 계획<select id="insight-plan"></select></label><button type="button" class="secondary" id="insight-refresh">↻ 집계 새로고침</button></div>
+        <form id="insight-period-form" class="insight-period-form" novalidate aria-label="돌아보기 기간" aria-describedby="insight-scope"><label for="insight-start-date">예정일 시작<input id="insight-start-date" name="start_date" type="date"></label><label for="insight-end-date">예정일 종료<input id="insight-end-date" name="end_date" type="date"></label><button type="submit" class="primary">기간 적용</button><button type="button" class="secondary" id="insight-all-period">전체 기간</button></form>
+        <p class="form-error" id="insight-period-error" role="alert" hidden></p>
         <p class="field-help" id="insight-scope">선택한 계획의 전체 기록 기준입니다. 숫자를 누르면 실제 근거 기록을 확인할 수 있습니다.</p>
         <p class="form-error" id="insight-error" role="alert" hidden></p>
         <div id="insight-cards" class="insight-cards" aria-label="Plan별 집계">

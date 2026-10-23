@@ -183,6 +183,18 @@ def create_task(
     }
 
 # 저장된 tasks 전체
+def task_date_filters(start_date: date | None = None, end_date: date | None = None):
+    """집계와 근거 조회가 같은 예정일 범위를 사용하도록 조건을 한곳에서 만든다."""
+    if start_date is not None and end_date is not None and start_date > end_date:
+        raise HTTPException(status_code=422, detail="종료일은 시작일보다 빠를 수 없습니다.")
+    filters = []
+    if start_date is not None:
+        filters.append(models.Task.scheduled_date >= start_date)
+    if end_date is not None:
+        filters.append(models.Task.scheduled_date <= end_date)
+    return filters
+
+
 @app.get("/tasks")
 def get_tasks(
     plan_id: int | None = None,
@@ -194,10 +206,11 @@ def get_tasks(
     tag: str | None = None,
     sort_by: str = "scheduled_date",
     order: str = "asc",
+    date_filters: list = Depends(task_date_filters),
     db: Session = Depends(get_db)
 ):
 
-    query = db.query(models.Task)
+    query = db.query(models.Task).filter(*date_filters)
 
     # Plan을 지정한 경우 해당 Plan의 Task만 남긴다.
     # is not None을 사용해 생략 여부를 명확히 구분한다.
@@ -628,6 +641,7 @@ def get_task_links(
 @app.get("/plans/{plan_id}/summary")
 def get_plan_summary(
     plan_id: int,
+    date_filters: list = Depends(task_date_filters),
     db: Session = Depends(get_db)
 ):
     # Plan이 없는 경우와 Task가 없는 경우를 구분한다.
@@ -653,7 +667,7 @@ def get_plan_summary(
             models.Task,
             models.Execution.task_id == models.Task.id
         )
-        .filter(models.Task.plan_id == plan_id)
+        .filter(models.Task.plan_id == plan_id, *date_filters)
         .all()
     )
 
@@ -668,7 +682,7 @@ def get_plan_summary(
     # 여기부터는 for문 밖이다. 앞에 공백 4칸을 사용한다.
     task_count = (
         db.query(models.Task)
-        .filter(models.Task.plan_id == plan_id)
+        .filter(models.Task.plan_id == plan_id, *date_filters)
         .count()
     )
 
@@ -677,7 +691,8 @@ def get_plan_summary(
         db.query(models.Task)
         .filter(
             models.Task.plan_id == plan_id,
-            models.Task.status == "DONE"
+            models.Task.status == "DONE",
+            *date_filters
         )
         .count()
     )
@@ -699,7 +714,8 @@ def get_plan_summary(
         .filter(
             models.Task.plan_id == plan_id,
             models.Task.status != "DONE",
-            models.Task.due_date < today
+            models.Task.due_date < today,
+            *date_filters
         )
         .count()
     )
@@ -708,7 +724,7 @@ def get_plan_summary(
     # 합칠 기록이 없으면 SQL SUM은 NULL을 반환하므로 0으로 처리한다.
     expected_minutes = (
         db.query(func.sum(models.Task.expected_minutes))
-        .filter(models.Task.plan_id == plan_id)
+        .filter(models.Task.plan_id == plan_id, *date_filters)
         .scalar()
     ) or 0
 
@@ -720,7 +736,7 @@ def get_plan_summary(
             models.Task,
             models.Execution.task_id == models.Task.id
         )
-        .filter(models.Task.plan_id == plan_id)
+        .filter(models.Task.plan_id == plan_id, *date_filters)
         .scalar()
     ) or 0
 
@@ -744,6 +760,7 @@ def get_plan_summary(
 @app.get("/plans/{plan_id}/executions")
 def get_plan_executions(
     plan_id: int,
+    date_filters: list = Depends(task_date_filters),
     db: Session = Depends(get_db)
 ):
     # Plan이 없는 경우와 실행 기록이 없는 경우를 구분한다.
@@ -766,7 +783,7 @@ def get_plan_executions(
             models.Task,
             models.Execution.task_id == models.Task.id
         )
-        .filter(models.Task.plan_id == plan_id)
+        .filter(models.Task.plan_id == plan_id, *date_filters)
         .order_by(
             models.Execution.created_at.asc(),
             models.Execution.id.asc()

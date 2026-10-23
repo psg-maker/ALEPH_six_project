@@ -3,6 +3,8 @@
   'use strict';
   const $ = id => document.getElementById(id);
   let plans = [], summary = null, metric = 'task_count', generation = 0, evidenceGeneration = 0;
+  // 입력 중인 날짜와 실제 적용된 범위를 분리해 숫자와 근거가 어긋나지 않게 한다.
+  let appliedPeriod = { start: '', end: '' };
   const titles = { task_count: '전체 할 일', completed_task_count: '완료한 할 일', overdue_task_count: '지연된 할 일', blocked_task_count: '막힌 이유가 있는 할 일', expected_minutes: '예상 시간의 근거', actual_minutes: '실제 시간의 근거', difference_minutes: '시간 차이의 근거' };
   function el(tag, className, text) { const n = document.createElement(tag); if (className) n.className = className; if (text != null) n.textContent = text; return n; }
   async function get(path) {
@@ -11,6 +13,12 @@
     return data;
   }
   const selectedId = () => Number($('insight-plan').value);
+  function withPeriod(path, period = appliedPeriod) {
+    const params = new URLSearchParams();
+    if (period.start) params.set('start_date', period.start);
+    if (period.end) params.set('end_date', period.end);
+    return params.size ? path + (path.includes('?') ? '&' : '?') + params : path;
+  }
   function setTotal(value, text) { $('insight-evidence-total').dataset.total = value; $('insight-evidence-total').textContent = text; }
   function recordButton(task) {
     const button = el('button', 'secondary evidence-open-record', '실행 기록 보기'); button.type = 'button';
@@ -51,7 +59,7 @@
       if (requestedMetric === 'overdue_task_count') params.set('overdue_only', 'true');
       if (requestedMetric === 'blocked_task_count') params.set('blocked_only', 'true');
       const needsExecutions = ['actual_minutes', 'difference_minutes', 'blocked_task_count'].includes(requestedMetric);
-      const [tasks, executions] = await Promise.all([get('/tasks?' + params), needsExecutions ? get(`/plans/${planId}/executions`) : Promise.resolve([])]);
+      const [tasks, executions] = await Promise.all([get(withPeriod('/tasks?' + params)), needsExecutions ? get(withPeriod(`/plans/${planId}/executions`)) : Promise.resolve([])]);
       if (request !== evidenceGeneration || planId !== selectedId() || $('insights-view').hidden) return;
       list.replaceChildren();
       let total;
@@ -93,9 +101,10 @@
     if (!planId) { document.dispatchEvent(new CustomEvent('aleph:review-plan', { detail: { plan: null, plans } })); $('insight-evidence').append(el('p', 'empty', '나의 계획에서 첫 계획을 만들어주세요.')); return; }
     const plan = plans.find(p => p.id === planId);
     document.dispatchEvent(new CustomEvent('aleph:review-plan', { detail: { plan, plans } }));
-    $('insight-scope').textContent = `집계 범위: ${plan?.title || ''}의 전체 기록 · 계획 기간 ${plan?.start_date || ''} ~ ${plan?.end_date || ''}. 숫자를 눌러 근거를 확인하세요.`;
+    const range = appliedPeriod.start || appliedPeriod.end ? `예정일 ${appliedPeriod.start || '처음'} ~ ${appliedPeriod.end || '마지막'} (시작·종료일 포함)` : '전체 기록';
+    $('insight-scope').textContent = `집계 범위: ${plan?.title || ''}의 ${range}. 대상 할 일에 연결된 모든 실행 기록을 포함하며 실행일은 제한하지 않습니다. 완료는 현재 상태, 지연은 오늘 기준입니다. 숫자를 눌러 근거를 확인하세요.`;
     try {
-      const data = await get(`/plans/${planId}/summary`);
+      const data = await get(withPeriod(`/plans/${planId}/summary`));
       if (request !== generation || planId !== selectedId() || $('insights-view').hidden) return;
       summary = data;
       document.querySelectorAll('#insight-cards [data-metric]').forEach(b => { b.querySelector('.insight-number').textContent = data[b.dataset.metric]; b.disabled = false; });
@@ -105,6 +114,24 @@
     } catch (error) { if (request === generation) { $('insight-error').textContent = error.message; $('insight-error').hidden = false; } }
   }
   $('insight-plan').addEventListener('change', () => { metric = 'task_count'; refresh(); });
+  $('insight-period-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const start = $('insight-start-date'), end = $('insight-end-date');
+    if (!start.checkValidity() || !end.checkValidity() || (start.value && end.value && start.value > end.value)) {
+      $('insight-period-error').textContent = '올바른 날짜를 입력하고, 종료일을 시작일과 같거나 이후로 선택해주세요. 기존 집계 범위는 유지됩니다.';
+      $('insight-period-error').hidden = false;
+      return;
+    }
+    $('insight-period-error').hidden = true;
+    appliedPeriod = { start: start.value, end: end.value };
+    refresh();
+  });
+  $('insight-all-period').addEventListener('click', () => {
+    $('insight-start-date').value = ''; $('insight-end-date').value = '';
+    $('insight-period-error').hidden = true;
+    appliedPeriod = { start: '', end: '' };
+    refresh();
+  });
   $('insight-refresh').addEventListener('click', refresh);
   $('insight-rate-open').addEventListener('click', () => showEvidence('completed_task_count'));
   document.querySelectorAll('#insight-cards [data-metric]').forEach(b => b.addEventListener('click', () => showEvidence(b.dataset.metric)));
