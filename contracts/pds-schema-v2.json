@@ -3,20 +3,33 @@
   "project": "ALEPH_six_project",
   "kind": "database-contract",
   "database": {
-    "engine": "SQLite",
-    "url": "sqlite:///./planner.db",
-    "path_base": "process working directory",
-    "foreign_keys": "PRAGMA foreign_keys=ON on every SQLAlchemy connection"
+    "engine": "SQLAlchemy: SQLite for local development; Neon PostgreSQL for Vercel deployment",
+    "selection": "DATABASE_URL environment variable; defaults to sqlite:///./planner.db when absent",
+    "local": {
+      "engine": "SQLite",
+      "url": "sqlite:///./planner.db",
+      "path_base": "process working directory",
+      "foreign_keys": "PRAGMA foreign_keys=ON on every SQLAlchemy connection"
+    },
+    "deployment": {
+      "engine": "Neon PostgreSQL",
+      "url": "DATABASE_URL environment variable; credentials are never stored in this contract",
+      "driver": "postgresql+psycopg2",
+      "foreign_keys": "PostgreSQL enforces declared foreign keys",
+      "schema_verification": "Table definitions below were checked against current SQLAlchemy metadata; live PostgreSQL catalog inspection is not part of this audit"
+    },
+    "type_notation": "SQLAlchemy logical types; DATETIME maps to SQLite DATETIME and PostgreSQL TIMESTAMP WITHOUT TIME ZONE"
   },
   "time_rules": {
     "date": "YYYY-MM-DD",
     "datetime": "ISO 8601 without timezone offset",
-    "clock": "server local date.today()/datetime.now(); no explicit Asia/Seoul conversion yet",
+    "clock": "today_in_seoul()/now_in_seoul() use fixed UTC+09:00 regardless of server timezone; generated datetimes are stored without an offset",
     "input_clock": "datetime-local values stored as entered, timezone-aware execution input rejected",
     "duration_unit": "integer minutes",
     "actual_minutes": "manual input; not calculated from timestamps",
     "difference_minutes": "actual minus expected",
-    "deployment_todo": "define and enforce Korea timezone before deployment"
+    "existing_values": "Existing stored timestamps and manually entered execution timestamps are not automatically converted",
+    "verification_remaining": "Seoul midnight boundary and deployed overdue edge cases are not reverified in this audit"
   },
   "tables": {
     "daily_notes": {
@@ -48,7 +61,7 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()"
         },
         "updated_at": {
           "type": "DATETIME",
@@ -56,7 +69,8 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()",
+          "onupdate": "SQLAlchemy client-side now_in_seoul()"
         }
       }
     },
@@ -119,7 +133,7 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()"
         }
       }
     },
@@ -217,7 +231,7 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()"
         }
       }
     },
@@ -300,7 +314,7 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()"
         },
         "updated_at": {
           "type": "DATETIME",
@@ -308,7 +322,8 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()",
+          "onupdate": "SQLAlchemy client-side now_in_seoul()"
         }
       }
     },
@@ -366,7 +381,7 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()"
         },
         "updated_at": {
           "type": "DATETIME",
@@ -374,7 +389,8 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()",
+          "onupdate": "SQLAlchemy client-side now_in_seoul()"
         }
       }
     },
@@ -424,7 +440,7 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()"
         }
       }
     },
@@ -516,7 +532,7 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()"
         },
         "updated_at": {
           "type": "DATETIME",
@@ -524,7 +540,8 @@
           "primary_key": false,
           "unique": false,
           "references": [],
-          "default": "server local datetime.now"
+          "default": "SQLAlchemy client-side now_in_seoul()",
+          "onupdate": "SQLAlchemy client-side now_in_seoul()"
         }
       }
     }
@@ -541,7 +558,7 @@
     "summary_scope": "Tasks in selected Plan; optional start_date/end_date inclusively filter Task.scheduled_date; omitted bounds are open; default is all Tasks",
     "summary_period_executions": "all Executions linked to selected Tasks regardless of execution date; completion is current status, overdue is evaluated against server today, not a historical snapshot",
     "summary_period_api": "GET /tasks, /plans/{plan_id}/summary and /plans/{plan_id}/executions share optional YYYY-MM-DD start_date/end_date; invalid or reversed dates return 422; no schema migration",
-    "overdue": "status != DONE and due_date < server today",
+    "overdue": "status != DONE and due_date is not null and due_date < today_in_seoul(); today-due, completed and undated Tasks are excluded",
     "blocked": "distinct Task IDs with any Execution blocked_reason.strip() nonempty, including DONE Tasks",
     "expected_minutes": "sum Task.expected_minutes, not Plan.expected_minutes",
     "actual_minutes": "sum associated Execution.actual_minutes, null treated as zero",

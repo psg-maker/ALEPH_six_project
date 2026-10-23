@@ -1,0 +1,44 @@
+{
+  "checked_at": "2026-10-23T12:31:40.490637+09:00",
+  "mode": "unauthenticated HTTP GET only; no writes",
+  "app_url": "https://aleph-six-project.vercel.app",
+  "table_counts": {
+    "plans": 4,
+    "plan_versions": 4,
+    "tasks": 5,
+    "task_links": 0,
+    "executions": 4,
+    "reviews": 1,
+    "daily_notes": 3
+  },
+  "plan_3": {
+    "task_count": 5,
+    "execution_count": 4,
+    "expected_minutes": 330,
+    "actual_minutes": 70
+  },
+  "checks": [
+    "export seven tables and attachment filename",
+    "all exported foreign-key references",
+    "deployed OpenAPI date parameters",
+    "Plan 3 summary task/time totals equal export",
+    "empty period excludes October 21 Tasks"
+  ],
+  "limitations": [
+    "No live PostgreSQL catalog inspection",
+    "No completion mutation or concurrency test",
+    "No deployment logs or environment inspection",
+    "Not a browser incognito session"
+  ],
+  "code_baseline_sha": "a563a8e7a6db3ebc49b401defdd2d7e1f6316009",
+  "local_checks": {
+    "python_unittest": 9,
+    "dom_api_test_files": 11,
+    "javascript_syntax_files": 4,
+    "python_syntax_files": 11,
+    "contract_tables": 7,
+    "contract_columns": 65,
+    "tracked_source_files_scanned": 37,
+    "pip_check": "passed"
+  }
+}
