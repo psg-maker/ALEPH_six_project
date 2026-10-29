@@ -109,9 +109,6 @@ class ExecutionCreate(BaseModel):
     # 수행 내용이나 막힌 이유 등을 자유롭게 기록한다.
     memo: str | None = None
 
-    # 수행 내용 등을 자유롭게 기록한다.
-    memo: str | None = None
-
     # 막힌 이유는 일반 메모와 별도로 입력받는다.
     blocked_reason: str | None = None
 

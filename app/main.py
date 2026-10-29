@@ -383,10 +383,12 @@ def root(request: Request):
 # 사용자가 보낸 데이터
 def create_plan(
     plan: schemas.PlanCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
     # DB에 넣을 Plan 객체 생성
     new_plan = models.Plan(
+        user_id=account.id,
         title=plan.title,
         description=plan.description,
         category=plan.category,
@@ -411,9 +413,14 @@ def create_plan(
 # plans table에서 조회를 하고, 모든 행을 가져온다.
 @app.get("/plans")
 def get_plans(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    plans = db.query(models.Plan).all()
+    plans = (
+        db.query(models.Plan)
+        .filter(models.Plan.user_id == account.id)
+        .all()
+    )
 
     return plans
 
@@ -422,15 +429,24 @@ def get_plans(
 def update_plan(
     plan_id: int,
     plan: schemas.PlanUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 수정할 기존 Plan을 찾는다.
-    existing_plan = db.query(models.Plan).filter(
-        models.Plan.id == plan_id
-    ).first()
+    # 요청한 ID와 로그인한 소유자가 모두 일치해야 한다.
+    existing_plan = (
+        db.query(models.Plan)
+        .filter(
+            models.Plan.id == plan_id,
+            models.Plan.user_id == account.id,
+        )
+        .first()
+    )
 
     if existing_plan is None:
-        return {"message": "Plan not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Plan not found",
+        )
 
     version_count = db.query(models.PlanVersion).filter(
         models.PlanVersion.plan_id == plan_id
@@ -476,8 +492,24 @@ def update_plan(
 @app.get("/plans/{plan_id}/versions")
 def get_plan_versions(
     plan_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
+    plan = (
+        db.query(models.Plan)
+        .filter(
+            models.Plan.id == plan_id,
+            models.Plan.user_id == account.id,
+        )
+        .first()
+    )
+
+    if plan is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Plan not found",
+        )
+
     versions = (
         db.query(models.PlanVersion)
         .filter(models.PlanVersion.plan_id == plan_id)
@@ -491,15 +523,23 @@ def get_plan_versions(
 @app.post("/tasks")
 def create_task(
     task: schemas.TaskCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # plan_id에 대한 검증(확인)
-    plan = db.query(models.Plan).filter(
-        models.Plan.id == task.plan_id
-    ).first()
+    plan = (
+        db.query(models.Plan)
+        .filter(
+            models.Plan.id == task.plan_id,
+            models.Plan.user_id == account.id,
+        )
+        .first()
+    )
 
     if plan is None:
-        return {"message": "Plan not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="Plan not found",
+        )
 
     new_task = models.Task(
         plan_id=task.plan_id,
@@ -548,10 +588,18 @@ def get_tasks(
     sort_by: str = "scheduled_date",
     order: str = "asc",
     date_filters: list = Depends(task_date_filters),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
 
-    query = db.query(models.Task).filter(*date_filters)
+    query = (
+        db.query(models.Task)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Plan.user_id == account.id,
+            *date_filters,
+        )
+    )
 
     # Plan을 지정한 경우 해당 Plan의 Task만 남긴다.
     # is not None을 사용해 생략 여부를 명확히 구분한다.
@@ -566,17 +614,22 @@ def get_tasks(
             models.Task.due_date < today_in_seoul()
         )
 
-            # 막힌 이유가 있는 Task만 조회하도록 조건을 추가한다.
+    # 막힌 이유가 있는 Task만 조회하도록 조건을 추가한다.
     if blocked_only:
         reasons_query = (
             db.query(
                 models.Execution.task_id,
-                models.Execution.blocked_reason
+                models.Execution.blocked_reason,
             )
             .join(
                 models.Task,
-                models.Execution.task_id == models.Task.id
+                models.Execution.task_id == models.Task.id,
             )
+            .join(
+                models.Plan,
+                models.Task.plan_id == models.Plan.id,
+            )
+            .filter(models.Plan.user_id == account.id)
         )
 
         # Plan이 지정되어 있으면 해당 Plan의 이유만 확인한다.
@@ -639,13 +692,18 @@ def get_tasks(
 # 저장된 tasks에서 scheduled_date == today
 @app.get("/tasks/today")
 def get_today_tasks(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
     today = today_in_seoul()
 
     tasks = (
         db.query(models.Task)
-        .filter(models.Task.scheduled_date == today)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Plan.user_id == account.id,
+            models.Task.scheduled_date == today,
+        )
         .order_by(models.Task.id)
         .all()
     )
@@ -656,11 +714,16 @@ def get_today_tasks(
 @app.patch("/tasks/{task_id}/complete")
 def complete_task(
     task_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
     task = (
         db.query(models.Task)
-        .filter(models.Task.id == task_id)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Task.id == task_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
@@ -708,17 +771,24 @@ def complete_task(
 @app.patch("/tasks/{task_id}/reopen")
 def reopen_task(
     task_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
     task = (
         db.query(models.Task)
-        .filter(models.Task.id == task_id)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Task.id == task_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
     if task is None:
-        return {"message": "Task not found"}
-
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found",
+        )
     if task.status == "TODO":
         return {
             "id": task.id,
@@ -745,17 +815,25 @@ def reopen_task(
 def update_task(
     task_id: int,
     task: schemas.TaskUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
     existing_task = (
         db.query(models.Task)
-        .filter(models.Task.id == task_id)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Task.id == task_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
     if existing_task is None:
-        return {"message": "Task not found"}
-
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found",
+        )
+    
     existing_task.title = task.title
     existing_task.description = task.description
     existing_task.scheduled_date = task.scheduled_date
@@ -773,21 +851,25 @@ def update_task(
 @app.delete("/tasks/{task_id}")
 def delete_task(
     task_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 삭제할 Task가 있는지 먼저 확인한다.
     task = (
         db.query(models.Task)
-        .filter(models.Task.id == task_id)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Task.id == task_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
     if task is None:
         raise HTTPException(
             status_code=404,
-            detail="Task not found"
+            detail="Task not found",
         )
-
+    
     try:
         # 해당 Task에 연결된 링크만 삭제한다.
         db.query(models.TaskLink).filter(
@@ -823,15 +905,18 @@ def delete_task(
 def create_execution(
     task_id: int,
     execution: schemas.ExecutionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 실행 기록을 연결할 Task가 실제로 존재하는지 확인한다.
     task = (
         db.query(models.Task)
-        .filter(models.Task.id == task_id)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Task.id == task_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
-
     if task is None:
         raise HTTPException(
             status_code=404,
@@ -878,12 +963,16 @@ def create_execution(
 @app.get("/tasks/{task_id}/executions")
 def get_executions(
     task_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 실행 기록이 없는 경우와 Task 자체가 없는 경우를 구분한다.
     task = (
         db.query(models.Task)
-        .filter(models.Task.id == task_id)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Task.id == task_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
@@ -913,15 +1002,18 @@ def get_executions(
 def create_task_link(
     task_id: int,
     link: schemas.TaskLinkCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 링크를 연결할 Task가 실제로 존재하는지 확인한다.
     task = (
         db.query(models.Task)
-        .filter(models.Task.id == task_id)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Task.id == task_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
-
     if task is None:
         raise HTTPException(
             status_code=404,
@@ -961,19 +1053,23 @@ def create_task_link(
 @app.get("/tasks/{task_id}/links")
 def get_task_links(
     task_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 링크가 없는 경우와 Task 자체가 없는 경우를 구분한다.
     task = (
         db.query(models.Task)
-        .filter(models.Task.id == task_id)
+        .join(models.Plan, models.Task.plan_id == models.Plan.id)
+        .filter(
+            models.Task.id == task_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
     if task is None:
         raise HTTPException(
             status_code=404,
-            detail="Task not found"
+            detail="Task not found",
         )
 
     # 해당 Task에 연결된 링크만 조회한다.
@@ -996,12 +1092,15 @@ def get_task_links(
 def get_plan_summary(
     plan_id: int,
     date_filters: list = Depends(task_date_filters),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # Plan이 없는 경우와 Task가 없는 경우를 구분한다.
     plan = (
         db.query(models.Plan)
-        .filter(models.Plan.id == plan_id)
+        .filter(
+            models.Plan.id == plan_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
@@ -1115,12 +1214,15 @@ def get_plan_summary(
 def get_plan_executions(
     plan_id: int,
     date_filters: list = Depends(task_date_filters),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # Plan이 없는 경우와 실행 기록이 없는 경우를 구분한다.
     plan = (
         db.query(models.Plan)
-        .filter(models.Plan.id == plan_id)
+        .filter(
+            models.Plan.id == plan_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
@@ -1153,12 +1255,15 @@ def get_plan_executions(
 def save_review(
     plan_id: int,
     review: schemas.ReviewSave,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 회고를 작성할 Plan이 존재하는지 확인한다.
     plan = (
         db.query(models.Plan)
-        .filter(models.Plan.id == plan_id)
+        .filter(
+            models.Plan.id == plan_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
@@ -1179,7 +1284,10 @@ def save_review(
 
         next_plan = (
             db.query(models.Plan)
-            .filter(models.Plan.id == review.next_plan_id)
+            .filter(
+                models.Plan.id == review.next_plan_id,
+                models.Plan.user_id == account.id,
+            )
             .first()
         )
 
@@ -1233,12 +1341,15 @@ def save_review(
 @app.get("/plans/{plan_id}/review")
 def get_review(
     plan_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # Plan 자체가 존재하는지 먼저 확인한다.
     plan = (
         db.query(models.Plan)
-        .filter(models.Plan.id == plan_id)
+        .filter(
+            models.Plan.id == plan_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
 
@@ -1263,14 +1374,18 @@ def get_review(
 def create_next_plan(
     plan_id: int,
     plan: schemas.PlanCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 출발점인 기존 Plan이 존재하는지 확인한다.
     source_plan = (
         db.query(models.Plan)
-        .filter(models.Plan.id == plan_id)
+        .filter(
+            models.Plan.id == plan_id,
+            models.Plan.user_id == account.id,
+        )
         .first()
     )
+
     if source_plan is None:
         raise HTTPException(status_code=404, detail="Plan not found")
 
@@ -1317,6 +1432,7 @@ def create_next_plan(
     # 검증된 PlanCreate 입력값을 딕셔너리로 변환한다.
     plan_data = plan.model_dump()
     plan_data["description"] = "\n\n".join(description_parts)
+    plan_data["user_id"] = account.id
     new_plan = models.Plan(**plan_data)
 
     try:
@@ -1366,18 +1482,24 @@ def create_next_plan(
 def save_daily_note(
     note_date: date,
     note: schemas.DailyNoteSave,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 날짜당 메모는 하나이므로 기존 기록을 먼저 찾는다.
+    # 사용자별 날짜당 메모 하나
     saved_note = (
         db.query(models.DailyNote)
-        .filter(models.DailyNote.note_date == note_date)
+        .filter(
+            models.DailyNote.note_date == note_date,
+            models.DailyNote.user_id == account.id,
+        )
         .first()
     )
 
     if saved_note is None:
-        # 해당 날짜에 처음 저장하는 메모를 만든다.
-        saved_note = models.DailyNote(note_date=note_date)
+        saved_note = models.DailyNote(
+            note_date=note_date,
+            user_id=account.id,
+        )
 
     # 기존 메모가 있으면 입력한 내용으로 전체 교체한다.
     # 빈 문자열도 허용하므로 내용을 비울 수 있다.
@@ -1406,60 +1528,86 @@ def save_daily_note(
 @app.get("/daily-notes/{note_date}")
 def get_daily_note(
     note_date: date,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 날짜당 메모는 최대 하나이므로 첫 기록을 조회한다.
     note = (
         db.query(models.DailyNote)
-        .filter(models.DailyNote.note_date == note_date)
+        .filter(
+            models.DailyNote.note_date == note_date,
+            models.DailyNote.user_id == account.id,
+        )
         .first()
     )
 
-    # 작성한 메모가 없으면 200과 null을 반환한다.
-    # 조회만 하므로 commit()은 필요 없다.
     return note
 
 # 저장된 전체 데이터를 JSON 파일 하나로 내보낸다.
 @app.get("/export")
 def export_data(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
 ):
-    # 테이블별로 ID순 정렬해 내보내는 순서를 일정하게 유지한다.
-    # 날짜·시각과 외래키 ID도 포함한다.
+    # 본인 계획 ID를 찾는 조회문
+    plan_ids = db.query(models.Plan.id).filter(
+        models.Plan.user_id == account.id
+    )
+
+    # 본인 계획에 속한 할 일 ID를 찾는 조회문
+    task_ids = db.query(models.Task.id).filter(
+        models.Task.plan_id.in_(plan_ids)
+    )
+
     data = {
-        "plans": db.query(models.Plan).order_by(models.Plan.id).all(),
+        "plans": (
+            db.query(models.Plan)
+            .filter(models.Plan.user_id == account.id)
+            .order_by(models.Plan.id)
+            .all()
+        ),
         "plan_versions": (
             db.query(models.PlanVersion)
+            .filter(models.PlanVersion.plan_id.in_(plan_ids))
             .order_by(models.PlanVersion.id)
             .all()
         ),
-        "tasks": db.query(models.Task).order_by(models.Task.id).all(),
+        "tasks": (
+            db.query(models.Task)
+            .filter(models.Task.plan_id.in_(plan_ids))
+            .order_by(models.Task.id)
+            .all()
+        ),
         "task_links": (
             db.query(models.TaskLink)
+            .filter(models.TaskLink.task_id.in_(task_ids))
             .order_by(models.TaskLink.id)
             .all()
         ),
         "executions": (
             db.query(models.Execution)
+            .filter(models.Execution.task_id.in_(task_ids))
             .order_by(models.Execution.id)
             .all()
         ),
-        "reviews": db.query(models.Review).order_by(models.Review.id).all(),
+        "reviews": (
+            db.query(models.Review)
+            .filter(models.Review.plan_id.in_(plan_ids))
+            .order_by(models.Review.id)
+            .all()
+        ),
         "daily_notes": (
             db.query(models.DailyNote)
+            .filter(models.DailyNote.user_id == account.id)
             .order_by(models.DailyNote.id)
             .all()
-        )
+        ),
     }
 
-    # ORM 객체 및 date/datetime을 JSON 응답용으로 변환한다.
-    # SQLAlchemy 내부 관리 정보는 기본적으로 제외된다.
-    encoded_data = jsonable_encoder(data)
-
     return JSONResponse(
-        content=encoded_data,
+        content=jsonable_encoder(data),
         headers={
-            # 브라우저에서 응답을 JSON 파일로 다운로드하도록 안내한다.
-            "Content-Disposition": 'attachment; filename="planner-export.json"'
-        }
-    )   
+            "Content-Disposition":
+                'attachment; filename="planner-export.json"',
+            "Cache-Control": "no-store",
+        },
+    )

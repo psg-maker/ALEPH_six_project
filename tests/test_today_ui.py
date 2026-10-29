@@ -1,7 +1,7 @@
 """실제 개인 DB 대신 메모리 DB로 화면과 연결 API를 검증한다."""
 import json
 import unittest
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
@@ -11,6 +11,8 @@ from sqlalchemy.pool import StaticPool
 
 from app import models
 from app.database import Base, enable_sqlite_foreign_keys, get_db
+from app.security import generate_session_token, hash_session_token, hash_password
+from app.time_utils import now_in_seoul, today_in_seoul
 
 # main의 기존 create_all이 개인 DB를 건드리지 않도록 import 시에만 막는다.
 with patch.object(Base.metadata, "create_all"):
@@ -26,6 +28,24 @@ class TodayUITest(unittest.IsolatedAsyncioTestCase):
         event.listen(self.engine, "connect", enable_sqlite_foreign_keys)
         Base.metadata.create_all(self.engine)
         self.sessions = sessionmaker(bind=self.engine)
+        self.previous_overrides = app.dependency_overrides.copy()
+        self.token = generate_session_token()
+        now = now_in_seoul()
+        with self.sessions() as db:
+            user = models.User(
+                username="today_test_owner",
+                password_hash=hash_password("test-only-today-password"),
+            )
+            db.add(user)
+            db.flush()
+            self.uid = user.id
+            db.add(models.AuthSession(
+                user_id=user.id,
+                session_hash=hash_session_token(self.token),
+                created_at=now,
+                expires_at=now + timedelta(hours=12),
+            ))
+            db.commit()
 
         def test_db():
             with self.sessions() as db:
@@ -35,12 +55,16 @@ class TodayUITest(unittest.IsolatedAsyncioTestCase):
 
     def tearDown(self):
         app.dependency_overrides.clear()
+        app.dependency_overrides.update(self.previous_overrides)
         self.engine.dispose()
 
-    async def request(self, method, path, payload=None):
+    async def request(self, method, path, payload=None, *, authenticated=True):
         parsed = urlsplit(path)
         messages = []
         raw = json.dumps(payload).encode() if payload is not None else b""
+        headers = [(b"content-type", b"application/json")]
+        if authenticated:
+            headers.append((b"cookie", ("aleph_session=" + self.token).encode()))
 
         async def receive():
             return {"type": "http.request", "body": raw, "more_body": False}
@@ -53,7 +77,7 @@ class TodayUITest(unittest.IsolatedAsyncioTestCase):
             "http_version": "1.1", "method": method, "scheme": "http",
             "path": parsed.path, "raw_path": parsed.path.encode(),
             "query_string": parsed.query.encode(),
-            "root_path": "", "headers": [(b"content-type", b"application/json")],
+            "root_path": "", "headers": headers,
             "client": ("127.0.0.1", 1), "server": ("test", 80),
         }, receive, send)
         start = next(m for m in messages if m["type"] == "http.response.start")
@@ -72,7 +96,7 @@ class TodayUITest(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(body)
 
     async def test_today_create_complete_reopen_and_reload(self):
-        today = date.today().isoformat()
+        today = today_in_seoul().isoformat()
         status, _, body = await self.request("POST", "/plans", {
             "title": "Test plan", "category": "study", "start_date": today,
             "end_date": today, "priority": "HIGH", "success_criteria": "done",
@@ -101,7 +125,7 @@ class TodayUITest(unittest.IsolatedAsyncioTestCase):
     def seed_period_records(self):
         """Boundary days, outside days and another Plan catch scope leaks."""
         with self.sessions() as db:
-            plans = [models.Plan(title=title, category="study", start_date=date(2026, 1, 1),
+            plans = [models.Plan(user_id=self.uid, title=title, category="study", start_date=date(2026, 1, 1),
                                  end_date=date(2026, 1, 31), priority="HIGH",
                                  success_criteria="done", expected_minutes=999)
                      for title in ("period", "other", "empty")]
@@ -188,6 +212,29 @@ class TodayUITest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, 404)
         self.assertEqual(await self.period_get('/tasks?plan_id=99999&start_date=2026-01-10'), [])
         self.assertEqual(await self.period_get('/export'), before)
+
+    async def test_missing_or_revoked_session_cannot_read_owned_data(self):
+        plans, _ = self.seed_period_records()
+        before = await self.period_get('/export')
+        paths = (
+            '/plans', '/tasks', '/tasks/today', '/export',
+            f'/plans/{plans[0]}/summary',
+            f'/plans/{plans[0]}/executions',
+        )
+        for path in paths:
+            status, _, _ = await self.request('GET', path, authenticated=False)
+            self.assertEqual(status, 401, path)
+
+        self.assertEqual(await self.period_get('/export'), before)
+        with self.sessions() as db:
+            db.query(models.AuthSession).filter_by(
+                session_hash=hash_session_token(self.token),
+            ).update({"revoked_at": now_in_seoul()})
+            db.commit()
+
+        for path in paths:
+            status, _, _ = await self.request('GET', path)
+            self.assertEqual(status, 401, path)
 
 
 if __name__ == "__main__":

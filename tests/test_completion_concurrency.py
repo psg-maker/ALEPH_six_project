@@ -8,11 +8,11 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from app import models
-from app.database import Base
+from app.database import Base, enable_sqlite_foreign_keys
 
 with patch.object(Base.metadata, "create_all"):
     from app.main import complete_task, reopen_task, get_plan_summary
@@ -25,10 +25,15 @@ class CompletionConcurrencyTest(unittest.TestCase):
             "sqlite:///" + (Path(self.temp.name) / "completion.db").as_posix(),
             connect_args={"check_same_thread": False, "timeout": 10},
         )
+        event.listen(self.engine, "connect", enable_sqlite_foreign_keys)
         Base.metadata.create_all(self.engine)
         self.sessions = sessionmaker(bind=self.engine)
         with self.sessions() as db:
-            plan = models.Plan(title="plan", category="study", start_date=date(2026, 1, 1),
+            user = models.User(username="completion_owner", password_hash="disabled-test-account")
+            db.add(user)
+            db.flush()
+            self.uid = user.id
+            plan = models.Plan(user_id=user.id, title="plan", category="study", start_date=date(2026, 1, 1),
                                end_date=date(2026, 1, 2), priority="HIGH",
                                success_criteria="done", expected_minutes=30)
             db.add(plan)
@@ -50,7 +55,7 @@ class CompletionConcurrencyTest(unittest.TestCase):
 
         def worker(index):
             with self.sessions() as db:
-                return complete_task(self.tid, db)
+                return complete_task(self.tid, db, account=db.get(models.User, self.uid))
 
         clocks = threading.local()
 
@@ -69,18 +74,19 @@ class CompletionConcurrencyTest(unittest.TestCase):
 
         self.assertEqual(results[0]["completed_at"], results[1]["completed_at"])
         with self.sessions() as db:
+            account = db.get(models.User, self.uid)
             task = db.get(models.Task, self.tid)
             self.assertEqual(task.completed_at, results[0]["completed_at"])
             self.assertEqual(db.query(models.Task).filter_by(status="DONE").count(), 1)
-            summary = get_plan_summary(self.pid, [], db)
+            summary = get_plan_summary(self.pid, [], db, account=account)
             self.assertEqual(summary["completed_task_count"], 1)
             self.assertEqual(summary["actual_minutes"], 7)
             self.assertEqual(db.query(models.Execution).count(), 1)
             self.assertEqual(task.expected_minutes, 30)
             # A later retry leaves the same completion; reopen allows a new one.
-            self.assertEqual(complete_task(self.tid, db)["completed_at"], task.completed_at)
-            reopen_task(self.tid, db)
+            self.assertEqual(complete_task(self.tid, db, account=account)["completed_at"], task.completed_at)
+            reopen_task(self.tid, db, account=account)
             self.assertIsNone(db.get(models.Task, self.tid).completed_at)
-            again = complete_task(self.tid, db)
+            again = complete_task(self.tid, db, account=account)
             self.assertEqual(again["status"], "DONE")
             self.assertEqual(db.query(models.Execution).count(), 1)
