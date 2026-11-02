@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', path='auth.css') }}">
+  <title>ALEPH · 로그인</title>
+  <script src="{{ url_for('static', path='auth.js') }}" defer></script>
+</head>
+<body>
+  <main>
+    <h1>DAYLOG</h1>
+    <p>내 계획과 실행을 담는 앱</p>
+
+    <form id="auth-form" method="post">
+      <h2 id="auth-title">로그인</h2>
+
+      <label for="auth-username">아이디</label>
+      <input
+        id="auth-username"
+        name="username"
+        type="text"
+        autocomplete="username"
+        maxlength="50"
+        required
+      >
+
+      <label for="auth-password">비밀번호</label>
+      <p id="password-help">비밀번호는 15~128자로 입력해주세요.</p>
+      <input
+        id="auth-password"
+        name="password"
+        type="password"
+        autocomplete="current-password"
+        aria-describedby="password-help"
+        minlength="15"
+        maxlength="128"
+        required
+      >
+
+      <p id="auth-error" role="alert" hidden></p>
+      <button id="auth-submit" type="submit" disabled>로그인</button>
+    </form>
+    <p id="auth-status" role="status" hidden></p>
+    <button id="auth-toggle" type="button">
+        계정이 없나요? 회원가입
+    </button>
+  </main>
+</body>
+</html>

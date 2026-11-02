@@ -16,6 +16,7 @@
 
   async function api(path, options = {}) {
     const response = await fetch(path, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } });
+    window.alephSession.checkResponse(response);
     const data = await response.json().catch(() => null);
     if (!response.ok) {
       const detail = data?.detail;

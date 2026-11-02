@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#5665d8">
   <title>ALEPH · 나의 계획과 기록</title>
   <link rel="stylesheet" href="{{ url_for('static', path='planner.css') }}">
+  <script src="{{ url_for('static', path='session.js') }}" defer></script>
   <script src="{{ url_for('static', path='review.js') }}" defer></script>
   <script src="{{ url_for('static', path='notes.js') }}" defer></script>
   <script src="{{ url_for('static', path='insights.js') }}" defer></script>
@@ -27,9 +28,27 @@
     <div class="sidebar-foot"><span class="status-dot"></span>작은 실행이 만드는 변화<a href="/export">전체 기록 내보내기 ↗</a></div>
   </aside>
   <div class="workspace">
-    <header class="app-bar"><span>나의 워크스페이스 <span class="crumb">/</span> <span id="breadcrumb">오늘</span></span><span class="private-label">MY PLANNER</span></header>
+    <header class="app-bar">
+      <span>
+        나의 워크스페이스
+        <span class="crumb">/</span>
+        <span id="breadcrumb">오늘</span>
+      </span>
+
+      <div class="account-menu">
+        <span id="account-name" title="{{ account.username }}">
+          {{ account.username }}
+        </span>
+        <button id="logout-button" type="button" disabled>
+          로그아웃
+        </button>
+      </div>
+    </header>
     <main id="main">
-      <p id="public-access-notice" class="public-access-notice">지금은 로그인이 없어 링크를 아는 사람은 누구나 볼 수 있습니다. 남이 봐도 괜찮은 내용만 넣으세요.</p>
+      <p id="session-error" class="form-error" role="alert" hidden></p>
+      <p id="public-access-notice" class="public-access-notice">
+        로그인한 계정의 계획과 기록만 표시됩니다.
+      </p>
       <header class="page-heading"><div><p id="date-label" class="eyebrow"></p><h1 id="page-title">오늘, 한 걸음 더.</h1><p id="page-caption">계획을 실행으로 바꾸는 작은 체크.</p></div><button class="primary" id="add-task">＋ 할 일 추가</button></header>
       <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
       <div id="load-error" class="error-box" role="alert" hidden><span id="load-error-text"></span><button id="retry" class="secondary">다시 시도</button></div>

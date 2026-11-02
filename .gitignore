@@ -30,3 +30,6 @@ backups/
 
 # DOM 테스트 도구 (제품 화면에는 JavaScript 라이브러리를 사용하지 않음)
 node_modules/
+
+# 개발자 개인정보
+*.txt

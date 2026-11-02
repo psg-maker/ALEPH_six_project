@@ -22,7 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.encoders import jsonable_encoder
 
 # JSON 응답의 다운로드 헤더를 설정할 때 사용한다.
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app import models, schemas
 from app.database import Base, engine, get_db
@@ -370,16 +370,59 @@ APP_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=APP_DIR / "templates")
 
+@app.get("/login")
+def login_page(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    try:
+        get_current_user(request, db)
+    except HTTPException as error:
+        if error.status_code != 401:
+            raise
+
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={},
+            headers={"Cache-Control": "no-store"},
+        )
+
+    return RedirectResponse(
+        url="/",
+        status_code=303,
+        headers={"Cache-Control": "no-store"},
+    )
+
 
 @app.get("/")
-def root(request: Request):
-    # 화면의 데이터 변경은 기존 JSON API를 통해 처리한다.
+def root(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    try:
+        account = get_current_user(request, db)
+    except HTTPException as error:
+        if error.status_code != 401:
+            raise
+
+        return RedirectResponse(
+            url="/login",
+            status_code=303,
+            headers={"Cache-Control": "no-store"},
+        )
+
     return templates.TemplateResponse(
-        request=request, name="index.html", context={"today": today_in_seoul().isoformat()}
+        request=request,
+        name="index.html",
+        context={
+            "today": today_in_seoul().isoformat(),
+            "account": account,
+        },
+        headers={"Cache-Control": "no-store"},
     )
 
 @app.post("/plans")
-
 # 사용자가 보낸 데이터
 def create_plan(
     plan: schemas.PlanCreate,

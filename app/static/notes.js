@@ -8,6 +8,7 @@
   const titleFormat = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
   async function api(path, options = {}) {
     const response = await fetch(path, { ...options, headers: { 'Content-Type': 'application/json' } });
+    window.alephSession.checkResponse(response);
     const data = await response.json();
     if (!response.ok) throw new Error(typeof data?.detail === 'string' ? data.detail : '날짜와 입력 내용을 확인해주세요.');
     return data;

@@ -9,6 +9,7 @@
   const drafts = new Map();
   async function api(path, options = {}) {
     const response = await fetch(path, { ...options, headers: { 'Content-Type': 'application/json' } });
+    window.alephSession.checkResponse(response);
     const data = await response.json();
     if (!response.ok) {
       const detail = data?.detail;

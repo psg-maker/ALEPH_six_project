@@ -8,7 +8,9 @@
   const titles = { task_count: '전체 할 일', completed_task_count: '완료한 할 일', overdue_task_count: '지연된 할 일', blocked_task_count: '막힌 이유가 있는 할 일', expected_minutes: '예상 시간의 근거', actual_minutes: '실제 시간의 근거', difference_minutes: '시간 차이의 근거' };
   function el(tag, className, text) { const n = document.createElement(tag); if (className) n.className = className; if (text != null) n.textContent = text; return n; }
   async function get(path) {
-    const response = await fetch(path); const data = await response.json();
+    const response = await fetch(path); 
+    window.alephSession.checkResponse(response);
+    const data = await response.json();
     if (!response.ok) throw new Error(typeof data?.detail === 'string' ? data.detail : '기록을 불러오지 못했습니다.');
     return data;
   }
