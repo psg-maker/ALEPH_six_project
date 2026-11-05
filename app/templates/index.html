@@ -7,6 +7,8 @@
   <title>ALEPH · 나의 계획과 기록</title>
   <link rel="stylesheet" href="{{ url_for('static', path='planner.css') }}">
   <script src="{{ url_for('static', path='session.js') }}" defer></script>
+  <script src="{{ url_for('static', path='password.js') }}" defer></script>
+  <script src="{{ url_for('static', path='account-delete.js') }}" defer></script>
   <script src="{{ url_for('static', path='review.js') }}" defer></script>
   <script src="{{ url_for('static', path='notes.js') }}" defer></script>
   <script src="{{ url_for('static', path='insights.js') }}" defer></script>
@@ -39,6 +41,9 @@
         <span id="account-name" title="{{ account.username }}">
           {{ account.username }}
         </span>
+        <button id="password-open" type="button" disabled>
+          비밀번호 변경
+        </button>
         <button id="logout-button" type="button" disabled>
           로그아웃
         </button>
@@ -99,8 +104,8 @@
         </section><p class="field-help">저장하면 해당 날짜의 내용을 교체합니다. 내용을 모두 지우고 저장하면 빈 메모로 남습니다. 저장하지 않은 초안은 페이지를 닫거나 새로고침하면 사라집니다.</p>
       </section>
     </main>
-    <footer class="page-footer">ALEPH <span>나의 계획과 실제를 담는 공간</span><a href="/export">전체 기록 내보내기 ↗</a></footer>
-  </div>
+  <footer class="page-footer">ALEPH<span>나의 계획과 실제를 담는 공간</span><a href="/export">전체 기록 내보내기 ↗</a><button id="account-delete-open" type="button" disabled>계정 삭제</button></footer>
+</div>
   <nav class="bottom-nav" aria-label="모바일 메뉴"><button data-view="today" class="selected" aria-current="page"><span aria-hidden="true">◷</span>오늘</button><button data-view="all"><span aria-hidden="true">☷</span>전체 할 일</button><button data-view="plans"><span aria-hidden="true">▦</span>계획</button><button data-view="insights"><span aria-hidden="true">↗</span>돌아보기</button><button data-view="notes"><span aria-hidden="true">✎</span>메모</button></nav>
 
   <dialog id="task-dialog" aria-labelledby="task-dialog-title"><form id="task-form"><div class="dialog-heading"><div><p class="eyebrow">작은 실행의 시작</p><h2 id="task-dialog-title">새로운 할 일</h2></div><button type="button" class="close" data-close="task-dialog" aria-label="닫기">×</button></div><p class="form-error" id="task-error" role="alert" hidden></p>
@@ -153,5 +158,114 @@
     <div class="next-plan-preview"><h3>새 계획에 저장될 설명</h3><p id="next-plan-preview"></p></div><p class="field-help">저장된 회고의 고칠 점과 다음 실천이 설명에 추가됩니다. 기존 계획은 바뀌지 않습니다.</p>
     <div class="dialog-actions"><button type="button" class="secondary" data-close="next-plan-dialog">취소</button><button type="submit" class="primary">다음 계획 생성</button></div>
   </form></dialog>
+  <dialog id="password-dialog" aria-labelledby="password-title">
+  <form id="password-form" method="post">
+    <h2 id="password-title">비밀번호 변경</h2>
+
+    <p class="field-help">
+      변경하면 모든 기기에서 기존 로그인이 해제됩니다.
+      새 비밀번호로 다시 로그인해주세요.
+    </p>
+
+    <label>
+      현재 비밀번호
+      <input
+        id="current-password"
+        type="password"
+        autocomplete="current-password"
+        maxlength="128"
+        required
+      >
+    </label>
+
+    <label>
+      새 비밀번호
+      <input
+        id="new-password"
+        type="password"
+        autocomplete="new-password"
+        minlength="15"
+        maxlength="128"
+        required
+      >
+    </label>
+
+    <label>
+      새 비밀번호 확인
+      <input
+        id="confirm-password"
+        type="password"
+        autocomplete="new-password"
+        minlength="15"
+        maxlength="128"
+        required
+      >
+    </label>
+
+    <p id="password-error" class="form-error" role="alert" hidden></p>
+
+    <div class="dialog-actions">
+      <button id="password-cancel" class="secondary" type="button">
+        취소
+      </button>
+      <button id="password-save" class="primary" type="submit" disabled>
+        비밀번호 변경
+      </button>
+    </div>
+  </form>
+</dialog>
+<dialog id="account-delete-dialog" aria-labelledby="account-delete-title" aria-describedby="account-delete-warning">
+  <form id="account-delete-form" method="post">
+    <h2 id="account-delete-title">계정 삭제</h2>
+
+    <p id="account-delete-warning">
+      계정과 모든 계획·할 일·실행 기록·회고·메모가 삭제됩니다.
+      삭제 후 앱에서 복구할 수 없습니다.
+      필요한 자료는 먼저 내보내주세요.
+    </p>
+
+    <p class="field-help">
+      기존 백업 사본은 이 작업으로 삭제되지 않습니다.
+    </p>
+
+    <label>
+      현재 비밀번호
+      <input
+        id="account-delete-password"
+        type="password"
+        autocomplete="current-password"
+        maxlength="128"
+        required
+      >
+    </label>
+
+    <label>
+      확인 문구: 계정 삭제
+      <input
+        id="account-delete-confirmation"
+        type="text"
+        autocomplete="off"
+        placeholder="계정 삭제"
+        required
+      >
+    </label>
+
+    <p
+      id="account-delete-error"
+      class="form-error"
+      role="alert"
+      hidden
+    ></p>
+
+    <div class="dialog-actions">
+      <button id="account-delete-cancel" class="secondary" type="button">
+        취소
+      </button>
+      <button id="account-delete-submit" type="submit" disabled>
+        계정과 모든 자료 삭제
+      </button>
+    </div>
+  </form>
+</dialog>
 </body>
 </html>

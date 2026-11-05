@@ -364,6 +364,118 @@ def change_password(
 
     return {"message": "비밀번호를 변경했습니다. 다시 로그인해주세요."}
 
+def validate_account_delete(
+    data: schemas.AccountDelete,
+    request: Request,
+    account: models.User,
+):
+    origin = request.headers.get("origin")
+    expected_origin = f"{request.url.scheme}://{request.url.netloc}"
+
+    if origin is not None and origin != expected_origin:
+        raise HTTPException(
+            status_code=403,
+            detail="허용되지 않은 요청 출처입니다.",
+        )
+
+    if data.confirmation != "계정 삭제":
+        raise HTTPException(
+            status_code=422,
+            detail="확인 문구에 '계정 삭제'를 정확히 입력해주세요.",
+        )
+
+    if not verify_password(
+        data.current_password.get_secret_value(),
+        account.password_hash,
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="현재 비밀번호가 올바르지 않습니다.",
+        )
+
+def delete_account_data(
+    db: Session,
+    account: models.User,
+):
+    plan_ids = [
+        plan_id
+        for (plan_id,) in db.query(models.Plan.id)
+        .filter(models.Plan.user_id == account.id)
+        .all()
+    ]
+
+    task_ids = [
+        task_id
+        for (task_id,) in db.query(models.Task.id)
+        .filter(models.Task.plan_id.in_(plan_ids))
+        .all()
+    ]
+
+    # 할 일을 참조하는 자식 자료부터 삭제
+    for model in (models.TaskLink, models.Execution):
+        db.query(model).filter(
+            model.task_id.in_(task_ids)
+        ).delete(synchronize_session=False)
+
+    db.query(models.Task).filter(
+        models.Task.id.in_(task_ids)
+    ).delete(synchronize_session=False)
+
+    # 회고는 현재 계획과 다음 계획을 참조하므로 계획보다 먼저 삭제
+    for model in (models.PlanVersion, models.Review):
+        db.query(model).filter(
+            model.plan_id.in_(plan_ids)
+        ).delete(synchronize_session=False)
+
+    db.query(models.Plan).filter(
+        models.Plan.id.in_(plan_ids)
+    ).delete(synchronize_session=False)
+
+    db.query(models.DailyNote).filter(
+        models.DailyNote.user_id == account.id
+    ).delete(synchronize_session=False)
+
+    db.query(models.AuthSession).filter(
+        models.AuthSession.user_id == account.id
+    ).delete(synchronize_session=False)
+
+    # 마지막에 계정 삭제
+    db.delete(account)
+
+@app.delete("/auth/account")
+def delete_account(
+    data: schemas.AccountDelete,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    account: models.User = Depends(get_current_user),
+):
+    validate_account_delete(data, request, account)
+
+    try:
+        delete_account_data(db, account)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="연결된 자료를 확인해야 해서 삭제를 취소했습니다.",
+        ) from None
+    except Exception:
+        db.rollback()
+        raise
+
+    response.delete_cookie(
+        key="aleph_session",
+        path="/",
+        httponly=True,
+        secure=request.url.scheme == "https",
+        samesite="lax",
+    )
+    response.headers["Cache-Control"] = "no-store"
+
+    return {"message": "계정과 자료가 삭제되었습니다."}
+
 
 # 실행 위치에 관계없이 app 폴더의 화면과 정적 파일을 찾는다.
 APP_DIR = Path(__file__).resolve().parent

@@ -37,6 +37,13 @@ class PasswordChange(BaseModel):
     # 새 비밀번호에는 현재 가입 정책을 적용한다.
     new_password: SecretStr = Field(min_length=15, max_length=128)
 
+class AccountDelete(BaseModel):
+    current_password: SecretStr = Field(
+        min_length=1,
+        max_length=128,
+    )
+    confirmation: str
+
 # 사용자에게 어떤 데이터를 받을지 정의한다.
 class PlanCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
