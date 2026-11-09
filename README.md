@@ -25,7 +25,7 @@ FastAPI · SQLAlchemy로 만든 Plan → Do → See 기록 앱입니다. Vercel�
 
 ## 실행 — Windows Git Bash
 
-현재 개발 환경은 Python 3.13입니다. 프로젝트 루트에서 실행합니다.
+현재 개발 환경은 Python 3.13입니다. local 실행은 프로젝트 루트에서 실행합니다.
 
 ```bash
 python -m venv venv
